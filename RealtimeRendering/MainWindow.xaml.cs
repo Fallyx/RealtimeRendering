@@ -12,6 +12,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Numerics;
 
 namespace RealtimeRendering
 {
@@ -23,6 +24,72 @@ namespace RealtimeRendering
         public MainWindow()
         {
             InitializeComponent();
+
+            CompositionTarget.Rendering += Render;
+        }
+
+        private void Render(object sender, EventArgs e)
+        {
+            DrawCanvas.Children.Clear();
+
+            Vector3[] cubePts = new Vector3[]
+            {
+                // top
+                new Vector3(-1, -1, -1),
+                new Vector3(1, -1, -1),
+                new Vector3(1, 1, -1),
+                new Vector3(-1, 1, -1),
+
+                // bottom
+                new Vector3(-1, -1, 1),
+                new Vector3(1, -1, 1),
+                new Vector3(1, 1, 1),
+                new Vector3(-1, 1, 1)
+            };
+
+            Vector3[] triangleIdx = new Vector3[]
+            {
+                new Vector3(0, 1, 2), // top
+                new Vector3(0, 2, 3),
+                new Vector3(7, 6, 5), // bottom
+                new Vector3(7, 5, 4),
+                new Vector3(0, 3, 7), // left
+                new Vector3(0, 7, 4),
+                new Vector3(2, 1, 5), // right
+                new Vector3(2, 5, 6),
+                new Vector3(3, 2, 6), // front
+                new Vector3(3, 6, 7),
+                new Vector3(1, 0, 4), // back
+                new Vector3(1, 4, 5)
+            };
+
+            
+
+            foreach (Vector3 v in triangleIdx)
+            {
+                Polygon poly = new Polygon();
+                poly.Stroke = Brushes.Black;
+
+                PointCollection pC = new PointCollection();
+
+                double w2 = DrawCanvas.Width / 2;
+                double h2 = DrawCanvas.Width / 2;
+
+                double x = DrawCanvas.Width * (cubePts[(int)v.X].X / (cubePts[(int)v.X].Z + 5)) + w2;
+                double y = DrawCanvas.Width * (cubePts[(int)v.X].Y / (cubePts[(int)v.X].Z + 5)) +h2;
+                pC.Add(new Point(x, y));
+
+                x = DrawCanvas.Width * (cubePts[(int)v.Y].X / (cubePts[(int)v.Y].Z + 5)) + w2;
+                y = DrawCanvas.Width * (cubePts[(int)v.Y].Y / (cubePts[(int)v.Y].Z + 5)) + h2;
+                pC.Add(new Point(x, y));
+
+                x = DrawCanvas.Width * (cubePts[(int)v.Z].X / (cubePts[(int)v.Z].Z + 5)) + w2;
+                y = DrawCanvas.Width * (cubePts[(int)v.Z].Y / (cubePts[(int)v.Z].Z + 5)) + h2;
+                pC.Add(new Point(x, y));
+
+                poly.Points = pC;
+                DrawCanvas.Children.Add(poly);
+            }
         }
     }
 }
