@@ -21,6 +21,8 @@ namespace RealtimeRendering
     /// </summary>
     public partial class MainWindow : Window
     {
+        private int alpha = 0;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -63,8 +65,6 @@ namespace RealtimeRendering
                 new Vector3(1, 4, 5)
             };
 
-            
-
             foreach (Vector3 v in triangleIdx)
             {
                 Polygon poly = new Polygon();
@@ -75,21 +75,39 @@ namespace RealtimeRendering
                 double w2 = DrawCanvas.Width / 2;
                 double h2 = DrawCanvas.Width / 2;
 
+                //Matrix mRot = new Matrix(Math.Cos(ToRad(alpha)), Math.Cos(ToRad(alpha + 90)), Math.Sin(ToRad(alpha)), Math.Sin(ToRad(alpha + 90)), 0, 0);
+                Matrix4x4 mRot = new Matrix4x4((float)Math.Cos(ToRad(alpha)), 0, (float)Math.Cos(ToRad(alpha + 90)), 0, 0, 1, 0, 0, (float)Math.Sin(ToRad(alpha)),0, (float)Math.Sin(ToRad(alpha + 90)), 0, 0, 0, 0, 1);
+
+
                 double x = DrawCanvas.Width * (cubePts[(int)v.X].X / (cubePts[(int)v.X].Z + 5)) + w2;
-                double y = DrawCanvas.Width * (cubePts[(int)v.X].Y / (cubePts[(int)v.X].Z + 5)) +h2;
-                pC.Add(new Point(x, y));
+                double y = DrawCanvas.Width * (cubePts[(int)v.X].Y / (cubePts[(int)v.X].Z + 5)) + h2;
+                Point p = new Point(x, y);
+                p = mRot.Transform(p);
+                pC.Add(p);
+
 
                 x = DrawCanvas.Width * (cubePts[(int)v.Y].X / (cubePts[(int)v.Y].Z + 5)) + w2;
                 y = DrawCanvas.Width * (cubePts[(int)v.Y].Y / (cubePts[(int)v.Y].Z + 5)) + h2;
-                pC.Add(new Point(x, y));
+                p = new Point(x, y);
+                p = mRot.Transform(p); 
+                pC.Add(p);
 
                 x = DrawCanvas.Width * (cubePts[(int)v.Z].X / (cubePts[(int)v.Z].Z + 5)) + w2;
                 y = DrawCanvas.Width * (cubePts[(int)v.Z].Y / (cubePts[(int)v.Z].Z + 5)) + h2;
-                pC.Add(new Point(x, y));
+                p = new Point(x, y);
+                p = mRot.Transform(p);
+                pC.Add(p);
 
                 poly.Points = pC;
                 DrawCanvas.Children.Add(poly);
             }
+
+            alpha++;
+        }
+
+        public double ToRad(double angle)
+        {
+            return (Math.PI / 180) * angle;
         }
     }
 }
