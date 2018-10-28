@@ -21,11 +21,14 @@ namespace RealtimeRendering
     /// </summary>
     public partial class MainWindow : Window
     {
-        private int alpha = 0;
+        private float alpha = 0;
+        private Triangle[] triangles;
 
         public MainWindow()
         {
             InitializeComponent();
+
+            triangles = CreateTriangles();
 
             CompositionTarget.Rendering += Render;
         }
@@ -34,6 +37,70 @@ namespace RealtimeRendering
         {
             DrawCanvas.Children.Clear();
 
+            Matrix4x4 mRot = Matrix4x4.CreateFromAxisAngle(new Vector3(1, 0, 0), (float)ToRad(alpha)) * Matrix4x4.CreateFromAxisAngle(new Vector3(0, 1, 0), (float)ToRad(alpha));
+
+            foreach(Triangle t in triangles)
+            {
+                Vector3 pA = Vector3.Transform(t.PointA, mRot);
+                Vector3 pB = Vector3.Transform(t.PointB, mRot);
+                Vector3 pC = Vector3.Transform(t.PointC, mRot);
+
+                pA += new Vector3(0, 0, 5);
+                pB += new Vector3(0, 0, 5);
+                pC += new Vector3(0, 0, 5);
+
+                PointCollection ptCol = new PointCollection();
+
+                double w2 = DrawCanvas.Width / 2;
+                double h2 = DrawCanvas.Width / 2;
+
+                double x = DrawCanvas.Width * (pA.X / pA.Z) + w2;
+                double y = DrawCanvas.Width * (pA.Y / pA.Z) + h2;
+                Point p = new Point(x, y);
+                ptCol.Add(p);
+
+                x = DrawCanvas.Width * (pB.X / pB.Z) + w2;
+                y = DrawCanvas.Width * (pB.Y / pB.Z) + h2;
+                p = new Point(x, y);
+                ptCol.Add(p);
+
+                x = DrawCanvas.Width * (pC.X / pC.Z) + w2;
+                y = DrawCanvas.Width * (pC.Y / pC.Z) + h2;
+                p = new Point(x, y);
+                ptCol.Add(p);
+
+                Vector3 culA = new Vector3((float)ptCol[0].X, (float)ptCol[0].Y, 0);
+                Vector3 culB = new Vector3((float)ptCol[1].X, (float)ptCol[1].Y, 0);
+                Vector3 culC = new Vector3((float)ptCol[2].X, (float)ptCol[2].Y, 0);
+
+                Vector3 backface = Vector3.Cross(culB - culA, culC - culA);
+                if (backface.Z < 0) continue;
+
+                Polygon poly = new Polygon();
+                poly.Stroke = Brushes.Black;
+                poly.Fill = t.Color;
+                poly.Points = ptCol;
+                DrawCanvas.Children.Add(poly);
+            }
+
+            alpha += 0.1f;
+        }
+
+        public double ToRad(double angle)
+        {
+            return (Math.PI / 180) * angle;
+        }
+
+        private Matrix4x4 ProjectionMatrix()
+        {
+            return new Matrix4x4((float)DrawCanvas.Width, 0, (float)DrawCanvas.Width / 2f, 0,
+                                0, (float)DrawCanvas.Width, (float)DrawCanvas.Height / 2f, 0,
+                                0, 0, 0, 0,
+                                0, 0, 1, 0);
+        }
+        
+        private Triangle[] CreateTriangles()
+        {
             Vector3[] cubePts = new Vector3[]
             {
                 // top
@@ -65,49 +132,14 @@ namespace RealtimeRendering
                 new Vector3(1, 4, 5)
             };
 
-            foreach (Vector3 v in triangleIdx)
+            Triangle[] triangles = new Triangle[triangleIdx.Length];
+
+            for(int i = 0; i < triangleIdx.Length; i++)
             {
-                Polygon poly = new Polygon();
-                poly.Stroke = Brushes.Black;
-
-                PointCollection pC = new PointCollection();
-
-                double w2 = DrawCanvas.Width / 2;
-                double h2 = DrawCanvas.Width / 2;
-
-                //Matrix mRot = new Matrix(Math.Cos(ToRad(alpha)), Math.Cos(ToRad(alpha + 90)), Math.Sin(ToRad(alpha)), Math.Sin(ToRad(alpha + 90)), 0, 0);
-                Matrix4x4 mRot = new Matrix4x4((float)Math.Cos(ToRad(alpha)), 0, (float)Math.Cos(ToRad(alpha + 90)), 0, 0, 1, 0, 0, (float)Math.Sin(ToRad(alpha)),0, (float)Math.Sin(ToRad(alpha + 90)), 0, 0, 0, 0, 1);
-
-
-                double x = DrawCanvas.Width * (cubePts[(int)v.X].X / (cubePts[(int)v.X].Z + 5)) + w2;
-                double y = DrawCanvas.Width * (cubePts[(int)v.X].Y / (cubePts[(int)v.X].Z + 5)) + h2;
-                Point p = new Point(x, y);
-                p = mRot.Transform(p);
-                pC.Add(p);
-
-
-                x = DrawCanvas.Width * (cubePts[(int)v.Y].X / (cubePts[(int)v.Y].Z + 5)) + w2;
-                y = DrawCanvas.Width * (cubePts[(int)v.Y].Y / (cubePts[(int)v.Y].Z + 5)) + h2;
-                p = new Point(x, y);
-                p = mRot.Transform(p); 
-                pC.Add(p);
-
-                x = DrawCanvas.Width * (cubePts[(int)v.Z].X / (cubePts[(int)v.Z].Z + 5)) + w2;
-                y = DrawCanvas.Width * (cubePts[(int)v.Z].Y / (cubePts[(int)v.Z].Z + 5)) + h2;
-                p = new Point(x, y);
-                p = mRot.Transform(p);
-                pC.Add(p);
-
-                poly.Points = pC;
-                DrawCanvas.Children.Add(poly);
+                triangles[i] = new Triangle(cubePts[(int)triangleIdx[i].X], cubePts[(int)triangleIdx[i].Y], cubePts[(int)triangleIdx[i].Z], Brushes.Beige);
             }
 
-            alpha++;
-        }
-
-        public double ToRad(double angle)
-        {
-            return (Math.PI / 180) * angle;
+            return triangles;
         }
     }
 }
