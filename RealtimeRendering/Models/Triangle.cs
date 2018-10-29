@@ -13,17 +13,26 @@ namespace RealtimeRendering
         private Vector3 pointA;
         private Vector3 pointB;
         private Vector3 pointC;
-        private Brush color;       
+        private Brush bColor;
+        private Vector3 color;
 
-        public Triangle(Vector3[] points, Brush color)
+        public Triangle(Vector3[] points, Brush bColor)
         {
             PointA = points[0];
             PointB = points[1];
             PointC = points[2];
-            Color = color;
+            BColor = bColor;
         }
 
-        public Triangle(Vector3 pointA, Vector3 pointB, Vector3 pointC, Brush color)
+        public Triangle(Vector3 pointA, Vector3 pointB, Vector3 pointC, Brush bColor)
+        {
+            PointA = pointA;
+            PointB = pointB;
+            PointC = pointC;
+            BColor = bColor;
+        }
+
+        public Triangle(Vector3 pointA, Vector3 pointB, Vector3 pointC, Vector3 color)
         {
             PointA = pointA;
             PointB = pointB;
@@ -34,6 +43,7 @@ namespace RealtimeRendering
         public Vector3 PointA { get => pointA; set => pointA = value; }
         public Vector3 PointB { get => pointB; set => pointB = value; }
         public Vector3 PointC { get => pointC; set => pointC = value; }
-        public Brush Color { get => color; set => color = value; }
+        public Brush BColor { get => bColor; set => bColor = value; }
+        public Vector3 Color { get => color; set => color = value; }
     }
 }

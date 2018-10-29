@@ -7,6 +7,10 @@
         mc:Ignorable="d"
         Title="MainWindow" SizeToContent="WidthAndHeight">
     <Grid>
-        <Canvas x:Name="DrawCanvas" HorizontalAlignment="Center" VerticalAlignment="Center" Height="770" Width="770" />
+        <!--
+        <Canvas x:Name="DrawCanvas" HorizontalAlignment="Center" VerticalAlignment="Center" Height="770" Width="770" >
+            
+        </Canvas> -->
+        <Image x:Name="rtrImage" HorizontalAlignment="Center" VerticalAlignment="Center" Height="770" Width="770" />
     </Grid>
 </Window>
