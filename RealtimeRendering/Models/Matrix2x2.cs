@@ -28,16 +28,16 @@ namespace RealtimeRendering.Models
 
         public static Matrix2x2 Inverse(Matrix2x2 m)
         {
-            //double det = 1f / (AB.X * AC.Y - AC.X * AB.Y);
-            double det = 1f / (m.M11 * m.M22 - m.M21 * m.M12);
-            /*
-            invMat[0] = invCalc * AC.Y;  // d
-            invMat[1] = invCalc * -AB.Y; // -c
-            invMat[2] = invCalc * -AC.X; // -b
-            invMat[3] = invCalc * AB.X; // a
-            */
+            if ((m.M11 * m.M22 - m.M12 * m.M21) == 0) return m;
 
-            return new Matrix2x2(det * m.M22, det * -m.M21, det * -m.M12, det * m.M11);
+            double det = 1f / (m.M11 * m.M22 - m.M12 * m.M21);
+
+            double d = det * m.M22;
+            double b = det * (m.M12 * -1);
+            double c = det * (m.M21 * -1);
+            double a = det * m.M11;
+
+            return new Matrix2x2(d, b, c, a);
         }
     }
 }

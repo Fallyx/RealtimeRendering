@@ -26,12 +26,13 @@ namespace RealtimeRendering
         private Triangle[] triangles;
         private WriteableBitmap wbmap;
         private byte[] pixels1d;
+        private byte[,,] pixels;
 
         public MainWindow()
         {
             InitializeComponent();
 
-            pixels1d = new byte[(int)rtrImage.Height * (int)rtrImage.Width * 4];
+            CompositionTarget.Rendering += Render2;
 
             wbmap = new WriteableBitmap(
                 (int)rtrImage.Width,
@@ -44,14 +45,14 @@ namespace RealtimeRendering
             triangles = CreateTriangles();
 
             rtrImage.Source = wbmap;
-
-            CompositionTarget.Rendering += Render2;
-            //Render2();
         }
 
         //private void Render2()
         private void Render2(object sender, EventArgs e)
         {
+            pixels = new byte[(int)rtrImage.Width, (int)rtrImage.Height, 4];
+            pixels1d = new byte[(int)rtrImage.Width * (int)rtrImage.Height * 4];
+
             Matrix4x4 mRot = Matrix4x4.CreateFromAxisAngle(new Vector3(1, 0, 0), (float)ToRad(alpha)) * Matrix4x4.CreateFromAxisAngle(new Vector3(0, 1, 0), (float)ToRad(alpha));
 
             foreach (Triangle triangle in triangles)
@@ -67,7 +68,7 @@ namespace RealtimeRendering
                 PointCollection ptCol = new PointCollection();
 
                 double w2 = rtrImage.Width / 2;
-                double h2 = rtrImage.Width / 2;
+                double h2 = rtrImage.Height / 2;
 
                 double x = rtrImage.Width * (pA.X / pA.Z) + w2;
                 double y = rtrImage.Width * (pA.Y / pA.Z) + h2;
@@ -96,25 +97,16 @@ namespace RealtimeRendering
                 Vector AB = t2d.PointB - t2d.PointA;
                 Vector AC = t2d.PointC - t2d.PointA;
 
+                Matrix2x2 m = new Matrix2x2(AB.X, AC.X, AB.Y, AC.Y);
+                Matrix2x2 invM = Matrix2x2.Inverse(m);
+
                 for (int py = 0; py < (int)rtrImage.Height; py++)
                 {
                     for (int px = 0; px < (int)rtrImage.Width; px++)
                     {
                         Vector AP = new Vector(px, py) - t2d.PointA;
-                        Matrix2x2 m = new Matrix2x2(AB.X, AB.Y, AC.X, AC.Y);
 
-                        /*
-                        double[] invMat = new double[4];
-                        double invCalc = 1f / (AB.X * AC.Y - AC.X * AB.Y);
-                        invMat[0] = invCalc * AC.Y;  // d
-                        invMat[1] = invCalc * -AB.Y; // -c
-                        invMat[2] = invCalc * -AC.X; // -b
-                        invMat[3] = invCalc * AB.X; // a
-                        */
-
-                        Matrix2x2 invM = Matrix2x2.Inverse(m);
-
-                        Vector uv = new Vector(invM.M11 * AP.X + invM.M21 * AP.Y, invM.M12 * AP.X + invM.M22 * AP.Y);
+                        Vector uv = new Vector(invM.M11 * AP.X + invM.M12 * AP.Y, invM.M21 * AP.X + invM.M22 * AP.Y);
                         if (uv.X >= 0 && uv.Y >= 0 && (uv.X + uv.Y) < 1)
                         {
                             SavePixel(px, py, triangle.Color);
@@ -123,11 +115,13 @@ namespace RealtimeRendering
                 }
             }
 
+            ConvertTo1d();
+
             Int32Rect rect = new Int32Rect(0, 0, (int)rtrImage.Width, (int)rtrImage.Height);
             int stride = 4 * (int)rtrImage.Width;
             wbmap.WritePixels(rect, pixels1d, stride, 0);
 
-            alpha += 0.5f;
+            alpha++;
         }
 
         private Vector CalcUV(int pX, int pY, Triangle triangle)
@@ -148,11 +142,28 @@ namespace RealtimeRendering
 
         private void SavePixel(int x, int y, Vector3 color)
         {
-            pixels1d[x * y] = (byte)(color.X * 255); // b
-            pixels1d[x * y + 1] = (byte)(color.Y * 255); // g
-            pixels1d[x * y + 2] = (byte)(color.Z * 255); // r
-            //pixels1d[x * y * 3] = 255;
+            pixels[x, y, 0] = (byte)(color.X * 255); // b
+            pixels[x, y, 1] = (byte)(color.Y * 255); // g
+            pixels[x, y, 2] = (byte)(color.Z * 255); // r
+            pixels[x, y, 3] = 255;
         }
+
+        private void ConvertTo1d()
+        {
+            int index = 0;
+
+            for (int row = 0; row < (int)rtrImage.Height; row++)
+            {
+                for (int col = 0; col < (int)rtrImage.Width; col++)
+                {
+                    pixels1d[index++] = pixels[row, col, 0];
+                    pixels1d[index++] = pixels[row, col, 1];
+                    pixels1d[index++] = pixels[row, col, 2];
+                    pixels1d[index++] = pixels[row, col, 3];
+                }
+            }
+        }
+
         /*
         private void Render(object sender, EventArgs e)
         {
@@ -213,15 +224,15 @@ namespace RealtimeRendering
             return (Math.PI / 180) * angle;
         }
 
-        /*
+        
         private Matrix4x4 ProjectionMatrix()
         {
-            return new Matrix4x4((float)DrawCanvas.Width, 0, (float)DrawCanvas.Width / 2f, 0,
-                                0, (float)DrawCanvas.Width, (float)DrawCanvas.Height / 2f, 0,
+            return new Matrix4x4((float)rtrImage.Width, 0, (float)rtrImage.Width / 2f, 0,
+                                0, (float)rtrImage.Width, (float)rtrImage.Height / 2f, 0,
                                 0, 0, 0, 0,
                                 0, 0, 1, 0);
         }
-        */
+        
         
         private Triangle[] CreateTriangles()
         {
