@@ -9,8 +9,10 @@
     <Grid>
         <!--
         <Canvas x:Name="DrawCanvas" HorizontalAlignment="Center" VerticalAlignment="Center" Height="770" Width="770" >
-            
-        </Canvas> -->
-        <Image x:Name="rtrImage" HorizontalAlignment="Center" VerticalAlignment="Center" Height="770" Width="770" />
+
+        </Canvas>
+        -->
+        <Image x:Name="rtrImage" HorizontalAlignment="Center" VerticalAlignment="Center" Height="440" Width="440" />
+        <Label x:Name="alphaLabel" Content="Label" HorizontalAlignment="Left" VerticalAlignment="Top" Background="White"/>
     </Grid>
 </Window>

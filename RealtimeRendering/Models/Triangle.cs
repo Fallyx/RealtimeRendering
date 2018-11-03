@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Numerics;
+﻿using System.Numerics;
 using System.Windows.Media;
+using RealtimeRendering.Helpers;
 
 namespace RealtimeRendering
 {
@@ -45,5 +41,10 @@ namespace RealtimeRendering
         public Vector3 PointC { get => pointC; set => pointC = value; }
         public Brush BColor { get => bColor; set => bColor = value; }
         public Vector3 Color { get => color; set => color = value; }
+
+        public Triangle Transform(Matrix4x4 m)
+        {
+            return new Triangle (MathHelper.Transform(PointA, m), MathHelper.Transform(PointB, m), MathHelper.Transform(PointC, m), Color);
+        }
     }
 }

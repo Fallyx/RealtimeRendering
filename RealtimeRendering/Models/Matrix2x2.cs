@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace RealtimeRendering.Models
+﻿namespace RealtimeRendering.Models
 {
     class Matrix2x2
     {
@@ -38,6 +32,11 @@ namespace RealtimeRendering.Models
             double a = det * m.M11;
 
             return new Matrix2x2(d, b, c, a);
+        }
+
+        public static Matrix2x2 Identity()
+        {
+            return new Matrix2x2(1, 0, 0, 1);
         }
     }
 }
