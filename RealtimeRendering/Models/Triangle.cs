@@ -11,6 +11,9 @@ namespace RealtimeRendering
         private Vector3 pointC;
         private Brush bColor;
         private Vector3 color;
+        private Vector3 colorA;
+        private Vector3 colorB;
+        private Vector3 colorC;
 
         public Triangle(Vector3[] points, Brush bColor)
         {
@@ -36,11 +39,24 @@ namespace RealtimeRendering
             Color = color;
         }
 
+        public Triangle(Vector3 pointA, Vector3 pointB, Vector3 pointC, Vector3 colorA, Vector3 colorB, Vector3 colorC)
+        {
+            PointA = pointA;
+            PointB = pointB;
+            PointC = pointC;
+            ColorA = colorA;
+            ColorB = colorB;
+            ColorC = colorC;
+        }
+
         public Vector3 PointA { get => pointA; set => pointA = value; }
         public Vector3 PointB { get => pointB; set => pointB = value; }
         public Vector3 PointC { get => pointC; set => pointC = value; }
         public Brush BColor { get => bColor; set => bColor = value; }
         public Vector3 Color { get => color; set => color = value; }
+        public Vector3 ColorA { get => colorA; set => colorA = value; }
+        public Vector3 ColorB { get => colorB; set => colorB = value; }
+        public Vector3 ColorC { get => colorC; set => colorC = value; }
 
         public Triangle Transform(Matrix4x4 m)
         {
