@@ -26,7 +26,6 @@ namespace RealtimeRendering
             InitializeComponent();
 
             triangles = CreateTriangles();
-
             pixels1d = new byte[winWidth * winHeight * 4];
             
             wbmap = new WriteableBitmap(
@@ -37,51 +36,32 @@ namespace RealtimeRendering
                 PixelFormats.Bgr32,
                 null);
 
-            CompositionTarget.Rendering += Render2;
+            CompositionTarget.Rendering += Render;
 
             rtrImage.Source = wbmap;
-            
         }
 
-        
-        //private void Render2()
-        private void Render2(object sender, EventArgs e)
+        private void Render(object sender, EventArgs e)
         {
             alphaLabel.Content = alpha;
 
+            Matrix4x4 rot = Matrix4x4.CreateFromAxisAngle(new Vector3(0, 1, 0), (float)ToRad(alpha));
+            Matrix4x4 rot2 = Matrix4x4.CreateFromAxisAngle(new Vector3(1, 0, 0), (float)ToRad(alpha));
+            Matrix4x4 transl = Matrix4x4.CreateTranslation(new Vector3(0, 0, 5));
+            Matrix4x4 M = rot * rot2 * transl * ProjectionMatrix();
+
             Array.Clear(pixels1d, 0, pixels1d.Length);
 
-            //Matrix4x4 mat = Matrix4x4.CreateFromAxisAngle(new Vector3(1, 0, 0), (float)ToRad(alpha)) * Matrix4x4.CreateFromAxisAngle(new Vector3(0, 1, 0), (float)ToRad(alpha)) * Matrix4x4.CreateTranslation(new Vector3(0, 0, 5)) * ProjectionMatrix();
-
-            Matrix4x4 mRot = Matrix4x4.CreateFromAxisAngle(new Vector3(1, 0, 0), (float)ToRad(alpha)) * Matrix4x4.CreateFromAxisAngle(new Vector3(0, 1, 0), (float)ToRad(alpha));
-
-            foreach (Triangle triangle in triangles)
+            foreach(Triangle triangle in triangles)
             {
-                Vector3 pA = Vector3.Transform(triangle.PointA, mRot);
-                Vector3 pB = Vector3.Transform(triangle.PointB, mRot);
-                Vector3 pC = Vector3.Transform(triangle.PointC, mRot);
+                Vector3 pA = MathHelper.Transform(triangle.PointA, M);
+                Vector3 pB = MathHelper.Transform(triangle.PointB, M);
+                Vector3 pC = MathHelper.Transform(triangle.PointC, M);
 
-                //Vector3 pA = MathHelper.Transform(triangle.PointA, mat);
-                //Vector3 pB = MathHelper.Transform(triangle.PointB, mat);
-                //Vector3 pC = MathHelper.Transform(triangle.PointC, mat);
-
-                
-                pA = triangle.PointA + new Vector3(0, 0, 5);
-                pB = triangle.PointB + new Vector3(0, 0, 5);
-                pC = triangle.PointC + new Vector3(0, 0, 5);
-                
-
-                double w2 = winWidth / 2;
-                double h2 = winHeight / 2;
-
-                Vector3 culA = new Vector3((float)(w2 + winWidth * (pA.X / pA.Z)), (float)(h2 + winWidth * (pA.Y / pA.Z)), 0);
-                Vector3 culB = new Vector3((float)(w2 + winWidth * (pB.X / pB.Z)), (float)(h2 + winWidth * (pB.Y / pB.Z)), 0);
-                Vector3 culC = new Vector3((float)(w2 + winWidth * (pC.X / pC.Z)), (float)(h2 + winWidth * (pC.Y / pC.Z)), 0);
-
-                Vector3 backface = Vector3.Cross(culB - culA, culC - culA);
+                Vector3 backface = Vector3.Cross(pB - pA, pC - pA);
                 if (backface.Z < 0) continue;
 
-                Triangle2D t2d = new Triangle2D(new Vector(culA.X, culA.Y), new Vector(culB.X, culB.Y), new Vector(culC.X, culC.Y));
+                Triangle2D t2d = new Triangle2D(new Vector(pA.X, pA.Y), new Vector(pB.X, pB.Y), new Vector(pC.X, pC.Y));
 
                 Vector AB = t2d.PointB - t2d.PointA;
                 Vector AC = t2d.PointC - t2d.PointA;
@@ -94,8 +74,8 @@ namespace RealtimeRendering
                     for (int px = 0; px < winWidth; px++)
                     {
                         Vector AP = new Vector(px, py) - t2d.PointA;
-
                         Vector uv = new Vector(invM.M11 * AP.X + invM.M12 * AP.Y, invM.M21 * AP.X + invM.M22 * AP.Y);
+
                         if (uv.X >= 0 && uv.Y >= 0 && (uv.X + uv.Y) < 1)
                         {
                             SavePixel1d((py * winWidth + px) * 4, triangle.Color);
@@ -110,23 +90,6 @@ namespace RealtimeRendering
 
             alpha++;
         }
-        
-
-        private Vector CalcUV(int pX, int pY, Triangle triangle)
-        {
-            Vector3 AP = new Vector3(pX, pY, 1) - triangle.PointA;
-            Vector3 AB = triangle.PointB - triangle.PointA;
-            Vector3 AC = triangle.PointC - triangle.PointA;
-
-            double[,] invMat = new double[2,2];
-            double invCalc = 1f / (AB.X * AC.Y - AC.X * AB.Y);
-            invMat[0, 0] = invCalc * AC.Y;
-            invMat[0, 1] = invCalc * -AB.Y;
-            invMat[1, 0] = invCalc * -AC.X;
-            invMat[1, 1] = invCalc * AB.X;
-
-            return new Vector(invMat[0, 0] * AP.X + invMat[1, 0] * AP.Y, invMat[0, 1] * AP.X + invMat[1, 1] * AP.Y);
-        }
 
         private void SavePixel1d(int index, Vector3 color)
         {
@@ -137,7 +100,7 @@ namespace RealtimeRendering
         }
         
         /*
-        private void Render(object sender, EventArgs e)
+        private void RenderPoly(object sender, EventArgs e)
         {
             DrawCanvas.Children.Clear();
 
@@ -198,10 +161,10 @@ namespace RealtimeRendering
 
         private static Matrix4x4 ProjectionMatrix()
         {
-            return new Matrix4x4 (winWidth, 0, winWidth / 2f, 0,
+            return Matrix4x4.Transpose(new Matrix4x4 (winWidth, 0, winWidth / 2f, 0,
                                 0, winWidth, winHeight / 2f, 0,
                                 0, 0, 0, 0,
-                                0, 0, 1, 0);
+                                0, 0, 1, 0));
         }
         
         private Triangle[] CreateTriangles()
@@ -238,13 +201,6 @@ namespace RealtimeRendering
             };
 
             Triangle[] triangles = new Triangle[triangleIdx.Length];
-
-            /*
-            for(int i = 0; i < triangleIdx.Length; i++)
-            {
-                triangles[i] = new Triangle(cubePts[(int)triangleIdx[i].X], cubePts[(int)triangleIdx[i].Y], cubePts[(int)triangleIdx[i].Z], new Vector3(0,0,1));
-            }
-            */
 
             triangles[0] = new Triangle(cubePts[(int)triangleIdx[0].X], cubePts[(int)triangleIdx[0].Y], cubePts[(int)triangleIdx[0].Z], new Vector3(0, 0, 1));
             triangles[1] = new Triangle(cubePts[(int)triangleIdx[1].X], cubePts[(int)triangleIdx[1].Y], cubePts[(int)triangleIdx[1].Z], new Vector3(0, 0, 0.8f));
