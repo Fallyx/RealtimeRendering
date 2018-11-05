@@ -17,9 +17,14 @@ namespace RealtimeRendering
         private Triangle[] triangles;
         private WriteableBitmap wbmap;
         private byte[] pixels1d;
+        private float[] zBuff1d;
 
         private static int winWidth = 440;
         private static int winHeight = 440;
+        private float zNear = float.PositiveInfinity;
+        private float zFar = float.NegativeInfinity;
+
+        Vector3 Eye = new Vector3(0, 0, -4);
 
         public MainWindow()
         {
@@ -27,6 +32,7 @@ namespace RealtimeRendering
 
             triangles = CreateTriangles();
             pixels1d = new byte[winWidth * winHeight * 4];
+            zBuff1d = new float[winWidth * winHeight];
             
             wbmap = new WriteableBitmap(
                 winWidth,
@@ -37,6 +43,8 @@ namespace RealtimeRendering
                 null);
 
             CompositionTarget.Rendering += Render;
+
+            Vector3 asdf = Vector3.Lerp(Vector3.Zero, Vector3.One, 0.5f);
 
             rtrImage.Source = wbmap;
         }
@@ -51,9 +59,22 @@ namespace RealtimeRendering
             Matrix4x4 M = rot * rot2 * transl * ProjectionMatrix();
 
             Array.Clear(pixels1d, 0, pixels1d.Length);
+            Array.Clear(zBuff1d, 0, zBuff1d.Length);
+
+            for(int i = 0; i < zBuff1d.Length; i++)
+            {
+                zBuff1d[i] = float.PositiveInfinity;
+            }
 
             foreach(Triangle triangle in triangles)
             {
+                Matrix4x4 mZ = rot * rot2 * transl;
+
+                Vector3 _pA = MathHelper.Transform(triangle.PointA, mZ);
+                Vector3 _pB = MathHelper.Transform(triangle.PointB, mZ);
+                Vector3 _pC = MathHelper.Transform(triangle.PointC, mZ);
+
+
                 Vector3 pA = MathHelper.Transform(triangle.PointA, M);
                 Vector3 pB = MathHelper.Transform(triangle.PointB, M);
                 Vector3 pC = MathHelper.Transform(triangle.PointC, M);
@@ -63,26 +84,52 @@ namespace RealtimeRendering
 
                 Triangle2D t2d = new Triangle2D(new Vector(pA.X, pA.Y), new Vector(pB.X, pB.Y), new Vector(pC.X, pC.Y), triangle.ColorA, triangle.ColorB, triangle.ColorC, backface.Z);
 
-                Vector AB = t2d.PointB - t2d.PointA;
-                Vector AC = t2d.PointC - t2d.PointA;
+                //Vector AB = t2d.PointB - t2d.PointA;
+                //Vector AC = t2d.PointC - t2d.PointA;
+
+                Vector3 AB = pB - pA;
+                Vector3 AC = pC - pA;
+
+                Vector3 _AB = _pB - _pC;
+                Vector3 _AC = _pC - _pA;
 
                 Matrix2x2 m = new Matrix2x2(AB.X, AC.X, AB.Y, AC.Y);
                 Matrix2x2 invM = Matrix2x2.Inverse(m);
 
-                for (int py = 0; py < winHeight; py++)
+                for (int py = t2d.MinY; py < t2d.MaxY; py++)
                 {
-                    for (int px = 0; px < winWidth; px++)
+                    for (int px = t2d.MinX; px < t2d.MaxX; px++)
                     {
-                        Vector AP = new Vector(px, py) - t2d.PointA;
+                        //Vector AP = new Vector(px, py) - t2d.PointA;
+                        Vector3 AP = new Vector3(px, py, 0) - pA;
                         Vector uv = new Vector(invM.M11 * AP.X + invM.M12 * AP.Y, invM.M21 * AP.X + invM.M22 * AP.Y);
 
                         if (uv.X >= 0 && uv.Y >= 0 && (uv.X + uv.Y) < 1)
                         {
-                            Vector3 c = t2d.InterpolateColor((float)uv.X, (float)uv.Y);
+                            float depth = (float)(_pA.Z + _AB.Z * uv.X + _AC.Z * uv.Y);
 
-                            SavePixel1d((py * winWidth + px) * 4, c);
+                            if(zBuff1d[py * winWidth + px] > depth)
+                            {
+                                zBuff1d[py * winWidth + px] = depth;
+                                zNear = Math.Min(zNear, depth);
+                                zFar = Math.Max(zFar, depth);
+
+                                //Vector3 c = t2d.InterpolateColor((float)uv.X, (float)uv.Y);
+
+                                //SavePixel1d((py * winWidth + px) * 4, c);
+                            }
                         }
                     }
+                }
+            }
+
+            for (int y = 0; y < winHeight; y++)
+            {
+                for(int x = 0; x < winWidth; x++)
+                {
+                    float f = zBuff1d[y * winWidth + x];
+                    if (!float.IsInfinity(f))
+                    SavePixel1dZ((y * winWidth + x) * 4, f);
                 }
             }
 
@@ -90,7 +137,7 @@ namespace RealtimeRendering
             int stride = 4 * winWidth;
             wbmap.WritePixels(rect, pixels1d, stride, 0);
 
-            alpha++;
+            alpha = (alpha + 1) % 360;
         }
 
         private void SavePixel1d(int index, Vector3 color)
@@ -98,6 +145,16 @@ namespace RealtimeRendering
             pixels1d[index] = (byte)(color.X * 255); // b
             pixels1d[index + 1] = (byte)(color.Y * 255); // g
             pixels1d[index + 2] = (byte)(color.Z * 255); // r
+            pixels1d[index + 3] = 255;
+        }
+
+        private void SavePixel1dZ(int index, float z)
+        {
+            // (int)((z - z.Min) / (z.Max - z.Min) * 255) * 0x010101
+            int zColor = (int)((z - zNear) / (zFar - zNear) * 255) * 0x010101;
+            pixels1d[index] = (byte)zColor; // b
+            pixels1d[index + 1] = (byte)zColor; // g
+            pixels1d[index + 2] = (byte)zColor; // r
             pixels1d[index + 3] = 255;
         }
         
@@ -219,23 +276,30 @@ namespace RealtimeRendering
             triangles[11] = new Triangle(cubePts[(int)triangleIdx[11].X], cubePts[(int)triangleIdx[11].Y], cubePts[(int)triangleIdx[11].Z], new Vector3(0.79f, 0.25f, 0.95f));
             */
 
-            triangles[0] = new Triangle(cubePts[(int)triangleIdx[0].X], cubePts[(int)triangleIdx[0].Y], cubePts[(int)triangleIdx[0].Z], new Vector3(0, 0, 1), new Vector3(0, 0, 0.8f), new Vector3(0, 0, 0.8f));
-            triangles[1] = new Triangle(cubePts[(int)triangleIdx[1].X], cubePts[(int)triangleIdx[1].Y], cubePts[(int)triangleIdx[1].Z], new Vector3(0, 0, 0.8f), new Vector3(0, 0, 1), new Vector3(0, 0, 0.8f));
+            Vector3 normalTop = new Vector3(0, 1, 0);
+            Vector3 normalBottom = new Vector3(0, -1, 0);
+            Vector3 normalLeft = new Vector3(-1, 0, 0);
+            Vector3 normalRight = new Vector3(1, 0, 0);
+            Vector3 normalFront = new Vector3(0, 0, -1);
+            Vector3 normalBack = new Vector3(0, 0, 1);
 
-            triangles[2] = new Triangle(cubePts[(int)triangleIdx[2].X], cubePts[(int)triangleIdx[2].Y], cubePts[(int)triangleIdx[2].Z], new Vector3(0, 1, 0), new Vector3(0, 0.8f, 0), new Vector3(0, 0.8f, 0));
-            triangles[3] = new Triangle(cubePts[(int)triangleIdx[3].X], cubePts[(int)triangleIdx[3].Y], cubePts[(int)triangleIdx[3].Z], new Vector3(0, 0.8f, 0), new Vector3(0, 1f, 0), new Vector3(0, 0.8f, 0));
+            triangles[0] = new Triangle(cubePts[(int)triangleIdx[0].X], cubePts[(int)triangleIdx[0].Y], cubePts[(int)triangleIdx[0].Z], normalTop, new Vector3(0, 0, 1), new Vector3(0, 0, 0.8f), new Vector3(0, 0, 0.8f));
+            triangles[1] = new Triangle(cubePts[(int)triangleIdx[1].X], cubePts[(int)triangleIdx[1].Y], cubePts[(int)triangleIdx[1].Z], normalTop, new Vector3(0, 0, 0.8f), new Vector3(0, 0, 1), new Vector3(0, 0, 0.8f));
 
-            triangles[4] = new Triangle(cubePts[(int)triangleIdx[4].X], cubePts[(int)triangleIdx[4].Y], cubePts[(int)triangleIdx[4].Z], new Vector3(1, 0, 0), new Vector3(0.8f, 0, 0), new Vector3(0.8f, 0, 0));
-            triangles[5] = new Triangle(cubePts[(int)triangleIdx[5].X], cubePts[(int)triangleIdx[5].Y], cubePts[(int)triangleIdx[5].Z], new Vector3(0.8f, 0, 0), new Vector3(1, 0, 0), new Vector3(0.8f, 0, 0));
+            triangles[2] = new Triangle(cubePts[(int)triangleIdx[2].X], cubePts[(int)triangleIdx[2].Y], cubePts[(int)triangleIdx[2].Z], normalBottom, new Vector3(0, 1, 0), new Vector3(0, 0.8f, 0), new Vector3(0, 0.8f, 0));
+            triangles[3] = new Triangle(cubePts[(int)triangleIdx[3].X], cubePts[(int)triangleIdx[3].Y], cubePts[(int)triangleIdx[3].Z], normalBottom, new Vector3(0, 0.8f, 0), new Vector3(0, 1f, 0), new Vector3(0, 0.8f, 0));
 
-            triangles[6] = new Triangle(cubePts[(int)triangleIdx[6].X], cubePts[(int)triangleIdx[6].Y], cubePts[(int)triangleIdx[6].Z], new Vector3(0.25f, 0.8f, 0.95f), new Vector3(0.25f, 0.94f, 0.95f), new Vector3(0.25f, 0.94f, 0.95f));
-            triangles[7] = new Triangle(cubePts[(int)triangleIdx[7].X], cubePts[(int)triangleIdx[7].Y], cubePts[(int)triangleIdx[7].Z], new Vector3(0.25f, 0.94f, 0.95f), new Vector3(0.25f, 0.8f, 0.95f), new Vector3(0.25f, 0.94f, 0.95f));
+            triangles[4] = new Triangle(cubePts[(int)triangleIdx[4].X], cubePts[(int)triangleIdx[4].Y], cubePts[(int)triangleIdx[4].Z], normalLeft, new Vector3(1, 0, 0), new Vector3(0.8f, 0, 0), new Vector3(0.8f, 0, 0));
+            triangles[5] = new Triangle(cubePts[(int)triangleIdx[5].X], cubePts[(int)triangleIdx[5].Y], cubePts[(int)triangleIdx[5].Z], normalLeft, new Vector3(0.8f, 0, 0), new Vector3(1, 0, 0), new Vector3(0.8f, 0, 0));
 
-            triangles[8] = new Triangle(cubePts[(int)triangleIdx[8].X], cubePts[(int)triangleIdx[8].Y], cubePts[(int)triangleIdx[8].Z], new Vector3(0.25f, 0.49f, 0.95f), new Vector3(0.25f, 0.69f, 0.95f), new Vector3(0.25f, 0.69f, 0.95f));
-            triangles[9] = new Triangle(cubePts[(int)triangleIdx[9].X], cubePts[(int)triangleIdx[9].Y], cubePts[(int)triangleIdx[9].Z], new Vector3(0.25f, 0.69f, 0.95f), new Vector3(0.25f, 0.49f, 0.95f), new Vector3(0.25f, 0.69f, 0.95f));
+            triangles[6] = new Triangle(cubePts[(int)triangleIdx[6].X], cubePts[(int)triangleIdx[6].Y], cubePts[(int)triangleIdx[6].Z], normalRight, new Vector3(0.25f, 0.8f, 0.95f), new Vector3(0.25f, 0.94f, 0.95f), new Vector3(0.25f, 0.94f, 0.95f));
+            triangles[7] = new Triangle(cubePts[(int)triangleIdx[7].X], cubePts[(int)triangleIdx[7].Y], cubePts[(int)triangleIdx[7].Z], normalRight, new Vector3(0.25f, 0.94f, 0.95f), new Vector3(0.25f, 0.8f, 0.95f), new Vector3(0.25f, 0.94f, 0.95f));
 
-            triangles[10] = new Triangle(cubePts[(int)triangleIdx[10].X], cubePts[(int)triangleIdx[10].Y], cubePts[(int)triangleIdx[10].Z], new Vector3(0.95f, 0.25f, 0.76f), new Vector3(0.79f, 0.25f, 0.95f), new Vector3(0.79f, 0.25f, 0.95f));
-            triangles[11] = new Triangle(cubePts[(int)triangleIdx[11].X], cubePts[(int)triangleIdx[11].Y], cubePts[(int)triangleIdx[11].Z], new Vector3(0.79f, 0.25f, 0.95f), new Vector3(0.95f, 0.25f, 0.76f), new Vector3(0.79f, 0.25f, 0.95f));
+            triangles[8] = new Triangle(cubePts[(int)triangleIdx[8].X], cubePts[(int)triangleIdx[8].Y], cubePts[(int)triangleIdx[8].Z], normalFront, new Vector3(0.25f, 0.49f, 0.95f), new Vector3(0.25f, 0.69f, 0.95f), new Vector3(0.25f, 0.69f, 0.95f));
+            triangles[9] = new Triangle(cubePts[(int)triangleIdx[9].X], cubePts[(int)triangleIdx[9].Y], cubePts[(int)triangleIdx[9].Z], normalFront, new Vector3(0.25f, 0.69f, 0.95f), new Vector3(0.25f, 0.49f, 0.95f), new Vector3(0.25f, 0.69f, 0.95f));
+
+            triangles[10] = new Triangle(cubePts[(int)triangleIdx[10].X], cubePts[(int)triangleIdx[10].Y], cubePts[(int)triangleIdx[10].Z], normalBack, new Vector3(0.95f, 0.25f, 0.76f), new Vector3(0.79f, 0.25f, 0.95f), new Vector3(0.79f, 0.25f, 0.95f));
+            triangles[11] = new Triangle(cubePts[(int)triangleIdx[11].X], cubePts[(int)triangleIdx[11].Y], cubePts[(int)triangleIdx[11].Z], normalBack, new Vector3(0.79f, 0.25f, 0.95f), new Vector3(0.95f, 0.25f, 0.76f), new Vector3(0.79f, 0.25f, 0.95f));
 
             return triangles;
         }

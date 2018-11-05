@@ -33,6 +33,8 @@ namespace RealtimeRendering.Models
             ColorA = new Vector4(colorA.X / w, colorA.Y / w, colorA.Z / w, 1 / w);
             ColorB = new Vector4(colorB.X / w, colorB.Y / w, colorB.Z / w, 1 / w);
             ColorC = new Vector4(colorC.X / w, colorC.Y / w, colorC.Z / w, 1 / w);
+
+            CalcMinMax();
         }
 
         public Vector3 InterpolateColor(float u, float v)
