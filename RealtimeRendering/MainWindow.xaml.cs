@@ -53,70 +53,87 @@ namespace RealtimeRendering
         {
             alphaLabel.Content = alpha;
 
-            Matrix4x4 rot = Matrix4x4.CreateFromAxisAngle(new Vector3(0, 1, 0), (float)ToRad(alpha));
-            Matrix4x4 rot2 = Matrix4x4.CreateFromAxisAngle(new Vector3(1, 0, 0), (float)ToRad(alpha));
-            Matrix4x4 transl = Matrix4x4.CreateTranslation(new Vector3(0, 0, 5));
-            Matrix4x4 M = rot * rot2 * transl * ProjectionMatrix();
-
             Array.Clear(pixels1d, 0, pixels1d.Length);
             Array.Clear(zBuff1d, 0, zBuff1d.Length);
 
-            for(int i = 0; i < zBuff1d.Length; i++)
+            for (int idx = 0; idx < 2; idx++)
             {
-                zBuff1d[i] = float.PositiveInfinity;
-            }
+                Matrix4x4 rot = Matrix4x4.CreateFromAxisAngle(new Vector3(0, 1, 0), (float)ToRad(alpha));
+                Matrix4x4 rot2 = Matrix4x4.CreateFromAxisAngle(new Vector3(1, 0, 0), (float)ToRad(alpha));
+                Matrix4x4 transRight = Matrix4x4.CreateTranslation(new Vector3(2, 0, 0));
+                Matrix4x4 scale = Matrix4x4.CreateScale(0.5f);
+                Matrix4x4 transl = Matrix4x4.CreateTranslation(new Vector3(0, 0, 5));
+                Matrix4x4 M;
 
-            foreach(Triangle triangle in triangles)
-            {
-                Matrix4x4 mZ = rot * rot2 * transl;
-
-                Vector3 _pA = MathHelper.Transform(triangle.PointA, mZ);
-                Vector3 _pB = MathHelper.Transform(triangle.PointB, mZ);
-                Vector3 _pC = MathHelper.Transform(triangle.PointC, mZ);
-
-
-                Vector3 pA = MathHelper.Transform(triangle.PointA, M);
-                Vector3 pB = MathHelper.Transform(triangle.PointB, M);
-                Vector3 pC = MathHelper.Transform(triangle.PointC, M);
-
-                Vector3 backface = Vector3.Cross(pB - pA, pC - pA);
-                if (backface.Z < 0) continue;
-
-                Triangle2D t2d = new Triangle2D(new Vector(pA.X, pA.Y), new Vector(pB.X, pB.Y), new Vector(pC.X, pC.Y), triangle.ColorA, triangle.ColorB, triangle.ColorC, backface.Z);
-
-                //Vector AB = t2d.PointB - t2d.PointA;
-                //Vector AC = t2d.PointC - t2d.PointA;
-
-                Vector3 AB = pB - pA;
-                Vector3 AC = pC - pA;
-
-                Vector3 _AB = _pB - _pC;
-                Vector3 _AC = _pC - _pA;
-
-                Matrix2x2 m = new Matrix2x2(AB.X, AC.X, AB.Y, AC.Y);
-                Matrix2x2 invM = Matrix2x2.Inverse(m);
-
-                for (int py = t2d.MinY; py < t2d.MaxY; py++)
+                if (idx == 0)
                 {
-                    for (int px = t2d.MinX; px < t2d.MaxX; px++)
+                    M = rot * rot2 * transl * ProjectionMatrix();
+                }
+                else
+                {
+                    M = rot * rot2 * transRight * scale * transl * ProjectionMatrix();
+                }
+                
+
+
+
+                for (int i = 0; i < zBuff1d.Length; i++)
+                {
+                    zBuff1d[i] = float.PositiveInfinity;
+                }
+
+                foreach (Triangle triangle in triangles)
+                {
+                    Matrix4x4 mZ = rot * rot2 * transl;
+
+                    Vector3 _pA = MathHelper.Transform(triangle.PointA, mZ);
+                    Vector3 _pB = MathHelper.Transform(triangle.PointB, mZ);
+                    Vector3 _pC = MathHelper.Transform(triangle.PointC, mZ);
+
+
+                    Vector3 pA = MathHelper.Transform(triangle.PointA, M);
+                    Vector3 pB = MathHelper.Transform(triangle.PointB, M);
+                    Vector3 pC = MathHelper.Transform(triangle.PointC, M);
+
+                    Vector3 backface = Vector3.Cross(pB - pA, pC - pA);
+                    if (backface.Z < 0) continue;
+
+                    Triangle2D t2d = new Triangle2D(new Vector(pA.X, pA.Y), new Vector(pB.X, pB.Y), new Vector(pC.X, pC.Y), triangle.ColorA, triangle.ColorB, triangle.ColorC, backface.Z);
+
+                    //Vector AB = t2d.PointB - t2d.PointA;
+                    //Vector AC = t2d.PointC - t2d.PointA;
+
+                    Vector3 AB = pB - pA;
+                    Vector3 AC = pC - pA;
+
+                    Vector3 _AB = _pB - _pC;
+                    Vector3 _AC = _pC - _pA;
+
+                    Matrix2x2 m = new Matrix2x2(AB.X, AC.X, AB.Y, AC.Y);
+                    Matrix2x2 invM = Matrix2x2.Inverse(m);
+
+                    for (int py = t2d.MinY; py < t2d.MaxY; py++)
                     {
-                        //Vector AP = new Vector(px, py) - t2d.PointA;
-                        Vector3 AP = new Vector3(px, py, 0) - pA;
-                        Vector uv = new Vector(invM.M11 * AP.X + invM.M12 * AP.Y, invM.M21 * AP.X + invM.M22 * AP.Y);
-
-                        if (uv.X >= 0 && uv.Y >= 0 && (uv.X + uv.Y) < 1)
+                        for (int px = t2d.MinX; px < t2d.MaxX; px++)
                         {
-                            float depth = (float)(_pA.Z + _AB.Z * uv.X + _AC.Z * uv.Y);
+                            //Vector AP = new Vector(px, py) - t2d.PointA;
+                            Vector3 AP = new Vector3(px, py, 0) - pA;
+                            Vector uv = new Vector(invM.M11 * AP.X + invM.M12 * AP.Y, invM.M21 * AP.X + invM.M22 * AP.Y);
 
-                            if(zBuff1d[py * winWidth + px] > depth)
+                            if (uv.X >= 0 && uv.Y >= 0 && (uv.X + uv.Y) < 1)
                             {
-                                zBuff1d[py * winWidth + px] = depth;
-                                zNear = Math.Min(zNear, depth);
-                                zFar = Math.Max(zFar, depth);
+                                float depth = (float)(_pA.Z + _AB.Z * uv.X + _AC.Z * uv.Y);
 
-                                //Vector3 c = t2d.InterpolateColor((float)uv.X, (float)uv.Y);
+                                if (zBuff1d[py * winWidth + px] > depth)
+                                {
+                                    zBuff1d[py * winWidth + px] = depth;
+                                    zNear = Math.Min(zNear, depth);
+                                    zFar = Math.Max(zFar, depth);
 
-                                //SavePixel1d((py * winWidth + px) * 4, c);
+                                    //Vector3 c = t2d.InterpolateColor((float)uv.X, (float)uv.Y);
+
+                                    //SavePixel1d((py * winWidth + px) * 4, c);
+                                }
                             }
                         }
                     }
@@ -129,7 +146,7 @@ namespace RealtimeRendering
                 {
                     float f = zBuff1d[y * winWidth + x];
                     if (!float.IsInfinity(f))
-                    SavePixel1dZ((y * winWidth + x) * 4, f);
+                        SavePixel1dZ((y * winWidth + x) * 4, f);
                 }
             }
 
@@ -151,7 +168,7 @@ namespace RealtimeRendering
         private void SavePixel1dZ(int index, float z)
         {
             // (int)((z - z.Min) / (z.Max - z.Min) * 255) * 0x010101
-            int zColor = (int)((z - zNear) / (zFar - zNear) * 255) * 0x010101;
+            int zColor = (int)((z - zFar) / (zNear - zFar) * 255) * 0x010101;
             pixels1d[index] = (byte)zColor; // b
             pixels1d[index + 1] = (byte)zColor; // g
             pixels1d[index + 2] = (byte)zColor; // r
