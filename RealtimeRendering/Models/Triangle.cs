@@ -41,16 +41,6 @@ namespace RealtimeRendering
             BColor = bColor;
         }
 
-        public Triangle(Vector3 pointA, Vector3 pointB, Vector3 pointC, Vector3 colorA, Vector3 colorB, Vector3 colorC)
-        {
-            PointA = pointA;
-            PointB = pointB;
-            PointC = pointC;
-            ColorA = colorA;
-            ColorB = colorB;
-            ColorC = colorC;
-        }
-
         public Triangle(Vector3 pointA, Vector3 pointB, Vector3 pointC, Vector3 normal, Vector3 colorA, Vector3 colorB, Vector3 colorC)
         {
             PointA = pointA;
@@ -91,9 +81,9 @@ namespace RealtimeRendering
 
         public void SetColorsH (float w)
         {
-            colorAH = new Vector4(ColorA.X / w, ColorA.Y / w, ColorA.Z / w, 1 / w);
-            colorBH = new Vector4(ColorB.X / w, ColorB.Y / w, ColorB.Z / w, 1 / w);
-            colorCH = new Vector4(ColorC.X / w, ColorC.Y / w, ColorC.Z / w, 1 / w);
+            colorAH = new Vector4(ColorA / w, 1 / w);
+            colorBH = new Vector4(ColorB / w, 1 / w);
+            colorCH = new Vector4(ColorC / w, 1 / w);
         }
 
 
@@ -126,14 +116,18 @@ namespace RealtimeRendering
             return new Vector3(pt.X, pt.Y, pt.Z);
         }
 
-        public void TransformNormal(Matrix4x4 m)
+        public Vector3 TransformNormal(Matrix4x4 m)
         {
             Vector4 norm = new Vector4(Normal, 0);
 
-            Vector4 transNorm = Vector4.Transform(norm, m);
+            Matrix4x4 invM;
+
+            bool t = Matrix4x4.Invert(m, out invM);
+
+            Vector4 transNorm = Vector4.Transform(norm, invM);
             transNorm /= transNorm.W;
 
-            Normal = new Vector3(transNorm.X, transNorm.Y, transNorm.Z);
+            return new Vector3(transNorm.X, transNorm.Y, transNorm.Z);
         }
     }
 }
