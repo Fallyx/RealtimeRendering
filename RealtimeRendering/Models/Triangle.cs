@@ -3,7 +3,7 @@ using System.Numerics;
 using System.Windows.Media;
 using RealtimeRendering.Helpers;
 
-namespace RealtimeRendering
+namespace RealtimeRendering.Models
 {
     public class Triangle
     {
@@ -27,6 +27,10 @@ namespace RealtimeRendering
         private Vector3 normalH;
         private Brush bColor;
 
+        private Vertex vA;
+        private Vertex vB;
+        private Vertex vC;
+
         private int minX;
         private int maxX;
         private int minY;
@@ -43,6 +47,7 @@ namespace RealtimeRendering
 
         public Triangle(Vector3 pointA, Vector3 pointB, Vector3 pointC, Vector3 normal, Vector3 colorA, Vector3 colorB, Vector3 colorC)
         {
+            /*
             PointA = pointA;
             ColorA = colorA;
             PointAH = new Vector4(pointA / pointA.Z, 1 / pointA.Z);
@@ -56,6 +61,11 @@ namespace RealtimeRendering
             PointCH = new Vector4(pointC / pointC.Z, 1 / pointC.Z);
 
             Normal = Vector3.Normalize(normal);
+            */
+
+            A = new Vertex(pointA, colorA, Vector3.Normalize(normal));
+            B = new Vertex(pointB, colorB, Vector3.Normalize(normal));
+            C = new Vertex(pointC, colorC, Vector3.Normalize(normal));
         }
 
         #region getter and setters
@@ -74,10 +84,15 @@ namespace RealtimeRendering
         public Vector4 ColorBH { get => colorBH; }
         public Vector4 ColorCH { get => colorCH; }
         public Vector3 NormalH { get => normalH; set => normalH = value; }
+
+
         public int MinX { get => minX; set => minX = value; }
         public int MaxX { get => maxX; set => maxX = value; }
         public int MinY { get => minY; set => minY = value; }
         public int MaxY { get => maxY; set => maxY = value; }
+        public Vertex A { get => vA; set => vA = value; }
+        public Vertex B { get => vB; set => vB = value; }
+        public Vertex C { get => vC; set => vC = value; }
 
         public void SetColorsH (float w)
         {
@@ -85,17 +100,7 @@ namespace RealtimeRendering
             colorBH = new Vector4(ColorB / w, 1 / w);
             colorCH = new Vector4(ColorC / w, 1 / w);
         }
-
-
         #endregion
-
-        public void CalcMinMax()
-        {
-            MinX = (int)Math.Min(PointA.X, Math.Min(PointB.X, PointC.X));
-            MaxX = (int)Math.Max(PointA.X, Math.Max(PointB.X, PointC.X));
-            MinY = (int)Math.Min(PointA.Y, Math.Min(PointB.Y, PointC.Y));
-            MaxY = (int)Math.Max(PointA.Y, Math.Max(PointB.Y, PointC.Y));
-        }
 
         public Vector3 InterpolateColor(float u, float v)
         {
@@ -108,6 +113,7 @@ namespace RealtimeRendering
             return colorPt;
         }
 
+        /*
         public Vector3 GetPoint(float u, float v)
         {
             Vector4 pt = PointAH + (PointBH - PointAH) * u + (PointCH - PointAH) * v;
@@ -115,14 +121,37 @@ namespace RealtimeRendering
 
             return new Vector3(pt.X, pt.Y, pt.Z);
         }
+        */
+
+        public Vector3 GetColor(float u, float v)
+        {
+            Vector4 clr = A.ColorH + (B.ColorH - A.ColorH) * u + (C.ColorH - A.ColorH) * v;
+            clr /= clr.W;
+
+            return new Vector3(clr.X, clr.Y, clr.Z);
+        }
+
+        public Vector3 GetPoint(float u, float v)
+        {
+            Vector4 pt = A.PointH + (B.PointH - A.PointH) * u + (C.PointH - A.PointH) * v;
+            pt /= pt.W;
+
+            return new Vector3(pt.X, pt.Y, pt.Z);
+        }
+
+        public Vector3 GetNormal(float u, float v)
+        {
+            Vector4 norm = A.NormalH + (B.NormalH - A.NormalH) * u + (C.NormalH - A.NormalH) * v;
+            norm /= norm.W;
+
+            return new Vector3(norm.X, norm.Y, norm.Z);
+        }
 
         public Vector3 TransformNormal(Matrix4x4 m)
         {
             Vector4 norm = new Vector4(Normal, 0);
 
-            Matrix4x4 invM;
-
-            bool t = Matrix4x4.Invert(m, out invM);
+            bool t = Matrix4x4.Invert(m, out Matrix4x4 invM);
 
             Vector4 transNorm = Vector4.Transform(norm, invM);
             transNorm /= transNorm.W;

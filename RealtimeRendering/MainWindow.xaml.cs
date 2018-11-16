@@ -27,15 +27,15 @@ namespace RealtimeRendering
         private float zNear = float.PositiveInfinity;
         private float zFar = float.NegativeInfinity;
 
-        Vector3 Light = new Vector3(0, 0, 0);
-        Vector3 Eye = new Vector3(0, 0, -4);
+        Vector3 Light = new Vector3(-10, 10, -5);
+        Vector3 Eye = new Vector3(0, 0, 0);
 
         public MainWindow()
         {
             InitializeComponent();
 
-            triangles[0] = CreateTriangles();
-            //triangles[0] = CreateTriangles(new Vector3(0, 0, 1));
+            //triangles[0] = CreateTriangles();
+            triangles[0] = CreateTriangles(new Vector3(0, 0, 1));
             triangles[1] = CreateTriangles(new Vector3(1, 0, 0));
             pixels1d = new byte[winWidth * winHeight * 4];
             colorBuff1d = new Vector3[winWidth * winHeight];
@@ -93,9 +93,9 @@ namespace RealtimeRendering
 
                 foreach (Triangle triangle in triangles[idx])
                 {
-                    Vector3 pA = MathHelper.Transform(triangle.PointA, M);
-                    Vector3 pB = MathHelper.Transform(triangle.PointB, M);
-                    Vector3 pC = MathHelper.Transform(triangle.PointC, M);
+                    Vector3 pA = MathHelper.Transform(triangle.A.Point, M);
+                    Vector3 pB = MathHelper.Transform(triangle.B.Point, M);
+                    Vector3 pC = MathHelper.Transform(triangle.C.Point, M);
 
                     //Triangle t = new Triangle(pA, pB, pC, triangle.Normal, triangle.ColorA, triangle.ColorB, triangle.ColorC);
 
@@ -113,8 +113,6 @@ namespace RealtimeRendering
 
                     Matrix2x2 m = new Matrix2x2(AB.X, AC.X, AB.Y, AC.Y);
                     Matrix2x2 invM = Matrix2x2.Inverse(m);
-
-                    //t.CalcMinMax();
 
                     int minX = (int)Math.Min(pA.X, Math.Min(pB.X, pC.X));
                     int maxX = (int)Math.Max(pA.X, Math.Max(pB.X, pC.X));
@@ -143,14 +141,18 @@ namespace RealtimeRendering
                                     zNear = Math.Min(zNear, depth);
                                     zFar = Math.Max(zFar, depth);
 
-                                    Vector3 c = triangle.InterpolateColor((float)uv.X, (float)uv.Y);
+                                    // Vector3 c = triangle.InterpolateColor((float)uv.X, (float)uv.Y);
+                                    Vector3 c = triangle.GetColor((float)uv.X, (float)uv.Y);
 
                                     colorBuff1d[buffIdx] = c;
-                                    Vector3 norm = Vector3.TransformNormal(triangle.Normal, M); 
-                                    normalBuff1d[buffIdx] = norm;
+                                    //Vector3 norm = Vector3.TransformNormal(triangle.Normal, M); 
+                                    Vector3 norm = triangle.GetNormal((float)uv.X, (float)uv.Y);
+                                    normalBuff1d[buffIdx] = Vector3.Normalize(Vector3.TransformNormal(norm, M));
                                     //triangle.TransformNormal(M);
                                     //normalBuff1d[buffIdx] = triangle.Normal;
                                     posBuff1d[buffIdx] = P;
+                                    
+                                    
                                     //SavePixel1d((py * winWidth + px) * 4, c);
                                 }
                             }
@@ -168,7 +170,7 @@ namespace RealtimeRendering
                     float f = zBuff1d[buffIdx];
                     if (!float.IsInfinity(f))
                     {
-                        /*
+                        
                         Vector3 normal = normalBuff1d[buffIdx];
                         Vector3 pos = posBuff1d[buffIdx];
                         Vector3 c = colorBuff1d[buffIdx];
@@ -179,9 +181,9 @@ namespace RealtimeRendering
                         float spec = Specular(pos, normal);
 
                         Vector3 pxlClr = new Vector3(0.1f, 0.1f, 0.1f) * new Vector3(c.X + diff, c.Y + diff, c.Z + diff) * new Vector3(c.X + spec, c.Y + spec, c.Z + spec);
-                        */
+                        
 
-                        Vector3 pxlClr = colorBuff1d[buffIdx];
+                        //Vector3 pxlClr = colorBuff1d[buffIdx];
 
                         SavePixel1d(buffIdx * 4, pxlClr);
                     }
@@ -361,12 +363,12 @@ namespace RealtimeRendering
             triangles[11] = new Triangle(cubePts[(int)triangleIdx[11].X], cubePts[(int)triangleIdx[11].Y], cubePts[(int)triangleIdx[11].Z], new Vector3(0.79f, 0.25f, 0.95f));
             */
 
-            Vector3 normalTop = new Vector3(0, 1, 0);
-            Vector3 normalBottom = new Vector3(0, -1, 0);
-            Vector3 normalLeft = new Vector3(-1, 0, 0);
-            Vector3 normalRight = new Vector3(1, 0, 0);
-            Vector3 normalFront = new Vector3(0, 0, -1);
-            Vector3 normalBack = new Vector3(0, 0, 1);
+            Vector3 normalTop = Vector3.UnitY; // new Vector3(0, 1, 0);
+            Vector3 normalBottom = -Vector3.UnitY; // new Vector3(0, -1, 0);
+            Vector3 normalLeft = -Vector3.UnitX; // new Vector3(-1, 0, 0);
+            Vector3 normalRight = Vector3.UnitX; // new Vector3(1, 0, 0);
+            Vector3 normalFront = -Vector3.UnitZ; // new Vector3(0, 0, -1);
+            Vector3 normalBack = Vector3.UnitZ; // new Vector3(0, 0, 1);
 
             
             triangles[0] = new Triangle(cubePts[(int)triangleIdx[0].X], cubePts[(int)triangleIdx[0].Y], cubePts[(int)triangleIdx[0].Z], normalTop, new Vector3(0, 0, 1), new Vector3(0, 0, 0.8f), new Vector3(0, 0, 0.8f));

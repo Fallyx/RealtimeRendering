@@ -33,10 +33,5 @@
 
             return new Matrix2x2(d, b, c, a);
         }
-
-        public static Matrix2x2 Identity()
-        {
-            return new Matrix2x2(1, 0, 0, 1);
-        }
     }
 }
