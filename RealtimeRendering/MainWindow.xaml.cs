@@ -36,9 +36,9 @@ namespace RealtimeRendering
         {
             InitializeComponent();
 
-            //triangles = CreateTriangles();
+            triangles = CreateTriangles();
             //triangles = CreateTriangles(new Vector3(0, 0, 1));
-            triangles = CreateTriangleTexture();
+            //triangles = CreateTriangleTexture();
             pixels1d = new byte[winWidth * winHeight * 4];
             colorBuff1d = new Vector3[winWidth * winHeight];
             zBuff1d = new float[winWidth * winHeight];
@@ -82,9 +82,15 @@ namespace RealtimeRendering
 
             foreach (Triangle triangle in triangles)
             {
-                Vector3 pA = MathHelper.Transform(triangle.A.Point, M);
-                Vector3 pB = MathHelper.Transform(triangle.B.Point, M);
-                Vector3 pC = MathHelper.Transform(triangle.C.Point, M);
+                //Vector3 pA = MathHelper.Transform(triangle.A.Point, M);
+                //Vector3 pB = MathHelper.Transform(triangle.B.Point, M);
+                //Vector3 pC = MathHelper.Transform(triangle.C.Point, M);
+
+                Triangle t = triangle.Transform(M);
+
+                Vector3 pA = t.A.Point;
+                Vector3 pB = t.B.Point;
+                Vector3 pC = t.C.Point;
 
                 //Triangle t = new Triangle(pA, pB, pC, triangle.Normal, triangle.ColorA, triangle.ColorB, triangle.ColorC);
 
@@ -95,7 +101,7 @@ namespace RealtimeRendering
                 if (backface.Z < 0) continue;
 
                 //t.TransformNormal(M);
-                triangle.SetColorsH(backface.Z);
+                t.SetColorsH(backface.Z);
 
                 //Vector3 AB = t.PointB - t.PointA;
                 //Vector3 AC = t.PointC - t.PointA;
@@ -119,7 +125,7 @@ namespace RealtimeRendering
                         if (uv.X >= 0 && uv.Y >= 0 && (uv.X + uv.Y) < 1)
                         {
                             //float depth = (float)(pA.Z + AB.Z * uv.X + AC.Z * uv.Y);
-                            Vector3 P = triangle.GetPoint((float)uv.X, (float)uv.Y);
+                            Vector3 P = t.GetPoint((float)uv.X, (float)uv.Y);
                             float depth = P.Z;
 
                             int buffIdx = py * winWidth + px;
@@ -131,17 +137,17 @@ namespace RealtimeRendering
                                 zFar = Math.Max(zFar, depth);
 
                                 // Vector3 c = triangle.InterpolateColor((float)uv.X, (float)uv.Y);
-                                if(!triangle.HasTexture)
+                                if(!t.HasTexture)
                                 {
-                                    Vector3 c = triangle.GetColor((float)uv.X, (float)uv.Y, backface.Z);
+                                    Vector3 c = t.GetColor((float)uv.X, (float)uv.Y, backface.Z);
 
                                     colorBuff1d[buffIdx] = c;
                                 }
                                 else
                                 {
-                                    Vector3 stAH = new Vector3(triangle.A.TextureSt / backface.Z, 1 / backface.Z);
-                                    Vector3 stBH = new Vector3(triangle.B.TextureSt / backface.Z, 1 / backface.Z);
-                                    Vector3 stCH = new Vector3(triangle.B.TextureSt / backface.Z, 1 / backface.Z);
+                                    Vector3 stAH = new Vector3(t.A.TextureSt / backface.Z, 1 / backface.Z);
+                                    Vector3 stBH = new Vector3(t.B.TextureSt / backface.Z, 1 / backface.Z);
+                                    Vector3 stCH = new Vector3(t.B.TextureSt / backface.Z, 1 / backface.Z);
 
                                     Vector3 stH = new Vector3(stAH.X + (float)uv.X * (stBH.X - stAH.X) + (float)uv.Y * (stCH.X - stAH.X),
                                         stAH.Y + (float)uv.X * (stBH.Y - stAH.Y) + (float)uv.Y * (stCH.Y - stAH.Y),
@@ -153,11 +159,11 @@ namespace RealtimeRendering
                                 }
                                 
                                 //Vector3 norm = Vector3.TransformNormal(triangle.Normal, M); 
-                                Vector3 norm = triangle.GetNormal((float)uv.X, (float)uv.Y);
+                                Vector3 norm = t.GetNormal((float)uv.X, (float)uv.Y);
                                 //Vector3 normh = triangle.GetNormal4((float)uv.X, (float)uv.Y, M);
 
-                                normalBuff1d[buffIdx] = Vector3.TransformNormal(norm, M);
-                                //normalBuff1d[buffIdx] = normh;
+                                //normalBuff1d[buffIdx] = Vector3.TransformNormal(norm, M);
+                                normalBuff1d[buffIdx] = norm;
                                 //triangle.TransformNormal(M);
                                 //normalBuff1d[buffIdx] = triangle.Normal;
                                 posBuff1d[buffIdx] = P;
@@ -180,7 +186,7 @@ namespace RealtimeRendering
                     float f = zBuff1d[buffIdx];
                     if (!float.IsInfinity(f))
                     {
-                        /*
+                        
                         Vector3 normal = normalBuff1d[buffIdx];
                         Vector3 pos = posBuff1d[buffIdx];
                         Vector3 c = colorBuff1d[buffIdx];
@@ -191,9 +197,9 @@ namespace RealtimeRendering
                         float spec = Specular(pos, normal);
 
                         Vector3 pxlClr = new Vector3(0.1f, 0.1f, 0.1f) * new Vector3(c.X + diff, c.Y + diff, c.Z + diff) * new Vector3(c.X + spec, c.Y + spec, c.Z + spec);
-                        */
+                        
 
-                        Vector3 pxlClr = colorBuff1d[buffIdx];
+                        //Vector3 pxlClr = colorBuff1d[buffIdx];
 
                         SavePixel1d(buffIdx * 4, pxlClr);
                     }
@@ -331,12 +337,12 @@ namespace RealtimeRendering
 
             Triangle[] triangles = new Triangle[triangleIdx.Length];
 
-            Vector3 normalTop = Vector3.UnitY; // new Vector3(0, 1, 0);
-            Vector3 normalBottom = -Vector3.UnitY; // new Vector3(0, -1, 0);
+            Vector3 normalTop = Vector3.UnitZ; // new Vector3(0, 1, 0);
+            Vector3 normalBottom = -Vector3.UnitZ; // new Vector3(0, -1, 0);
             Vector3 normalLeft = -Vector3.UnitX; // new Vector3(-1, 0, 0);
             Vector3 normalRight = Vector3.UnitX; // new Vector3(1, 0, 0);
-            Vector3 normalFront = -Vector3.UnitZ; // new Vector3(0, 0, -1);
-            Vector3 normalBack = Vector3.UnitZ; // new Vector3(0, 0, 1);
+            Vector3 normalFront = Vector3.UnitY; // new Vector3(0, 0, -1);
+            Vector3 normalBack = -Vector3.UnitY; // new Vector3(0, 0, 1);
 
             
             triangles[0] = new Triangle(cubePts[(int)triangleIdx[0].X], cubePts[(int)triangleIdx[0].Y], cubePts[(int)triangleIdx[0].Z], normalTop, new Vector3(0, 0, 1), new Vector3(0, 0, 0.8f), new Vector3(0, 0, 0.8f));

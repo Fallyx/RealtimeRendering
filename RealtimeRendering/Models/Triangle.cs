@@ -73,6 +73,13 @@ namespace RealtimeRendering.Models
             HasTexture = false;
         }
 
+        public Triangle(Vertex vA, Vertex vB, Vertex vC)
+        {
+            A = vA;
+            B = vB;
+            C = vC;
+        }
+
         public Triangle(Vector3 pointA, Vector3 pointB, Vector3 pointC, Vector3 normal, Vector2 stA, Vector2 stB, Vector2 stC)
         {
             A = new Vertex(pointA, stA, Vector3.Normalize(normal));
@@ -196,6 +203,15 @@ namespace RealtimeRendering.Models
             normh = Vector4.Normalize(normh);
 
             return new Vector3(normh.X, normh.Y, normh.Z);
+        }
+
+        public Triangle Transform(Matrix4x4 m)
+        {
+            Vertex _A = A.Transform(m);
+            Vertex _B = B.Transform(m);
+            Vertex _C = C.Transform(m);
+
+            return new Triangle(_A, _B, _C);
         }
 
         public Vector3 TransformNormal(Matrix4x4 m)
