@@ -37,6 +37,13 @@ namespace RealtimeRendering.Models
             Normal = normal;
         }
 
+        public Vertex(Vector3 point, Vector2 st, Vector3 normal)
+        {
+            Point = point;
+            TextureSt = st;
+            Normal = normal;
+        }
+
         public Vertex Transform(Matrix4x4 m)
         {
             return null;

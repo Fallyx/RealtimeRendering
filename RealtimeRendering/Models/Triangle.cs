@@ -35,6 +35,8 @@ namespace RealtimeRendering.Models
         private int maxX;
         private int minY;
         private int maxY;
+
+        private bool hasTexture;
         #endregion
 
         public Triangle(Vector3 pointA, Vector3 pointB, Vector3 pointC, Brush bColor)
@@ -62,10 +64,21 @@ namespace RealtimeRendering.Models
 
             Normal = Vector3.Normalize(normal);
             */
+            //Vector3 normal = Vector3.Normalize(Vector3.Cross(C - A, B - A));
+
 
             A = new Vertex(pointA, colorA, Vector3.Normalize(normal));
             B = new Vertex(pointB, colorB, Vector3.Normalize(normal));
             C = new Vertex(pointC, colorC, Vector3.Normalize(normal));
+            HasTexture = false;
+        }
+
+        public Triangle(Vector3 pointA, Vector3 pointB, Vector3 pointC, Vector3 normal, Vector2 stA, Vector2 stB, Vector2 stC)
+        {
+            A = new Vertex(pointA, stA, Vector3.Normalize(normal));
+            B = new Vertex(pointB, stB, Vector3.Normalize(normal));
+            C = new Vertex(pointC, stC, Vector3.Normalize(normal));
+            HasTexture = true;
         }
 
         #region getter and setters
@@ -93,6 +106,7 @@ namespace RealtimeRendering.Models
         public Vertex A { get => vA; set => vA = value; }
         public Vertex B { get => vB; set => vB = value; }
         public Vertex C { get => vC; set => vC = value; }
+        public bool HasTexture { get => hasTexture; private set => hasTexture = value; }
 
         public void SetColorsH (float w)
         {
@@ -131,6 +145,20 @@ namespace RealtimeRendering.Models
             return new Vector3(clr.X, clr.Y, clr.Z);
         }
 
+        public Vector3 GetColor(float u, float v, float w)
+        {
+            Vector4 clrAH = new Vector4(A.Color / w, 1 / w);
+            Vector4 clrBH = new Vector4(B.Color / w, 1 / w);
+            Vector4 clrCH = new Vector4(C.Color / w, 1 / w);
+
+            Vector4 clrH = new Vector4(clrAH.X + u * (clrBH.X - clrAH.X) + v * (clrCH.X - clrAH.X),
+                clrAH.Y + u * (clrBH.Y - clrAH.Y) + v * (clrCH.Y - clrAH.Y),
+                clrAH.Z + u * (clrBH.Z - clrAH.Z) + v * (clrCH.Z - clrAH.Z),
+                clrAH.W + u * (clrBH.W - clrAH.W) + v * (clrCH.W - clrAH.W));
+
+           return new Vector3(clrH.X / clrH.W, clrH.Y / clrH.W, clrH.Z / clrH.W);
+        }
+
         public Vector3 GetPoint(float u, float v)
         {
             Vector4 pt = A.PointH + (B.PointH - A.PointH) * u + (C.PointH - A.PointH) * v;
@@ -145,6 +173,29 @@ namespace RealtimeRendering.Models
             norm /= norm.W;
 
             return new Vector3(norm.X, norm.Y, norm.Z);
+        }
+
+        public Vector3 GetNormal4(float u, float v, Matrix4x4 M)
+        {
+            Matrix4x4.Invert(M, out Matrix4x4 invM);
+
+            Vector4 normhA = Vector4.Transform(A.Normal, invM);
+            normhA.W = 0;
+            normhA = Vector4.Normalize(normhA);
+
+            Vector4 normhB = Vector4.Transform(B.Normal, invM);
+            normhB.W = 0;
+            normhB = Vector4.Normalize(normhB);
+
+            Vector4 normhC = Vector4.Transform(C.Normal, invM);
+            normhC.W = 0;
+            normhC = Vector4.Normalize(normhC);
+
+            Vector4 normh = normhA + (normhB - normhA) * u + (normhC - normhA) * v;
+            normh.W = 0;
+            normh = Vector4.Normalize(normh);
+
+            return new Vector3(normh.X, normh.Y, normh.Z);
         }
 
         public Vector3 TransformNormal(Matrix4x4 m)
