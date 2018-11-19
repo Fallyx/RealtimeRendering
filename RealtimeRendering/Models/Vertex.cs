@@ -19,13 +19,12 @@ namespace RealtimeRendering.Models
         public Vector3 Color { get => color; set => color = value; }
         public Vector3 Normal { get => normal; set => normal = value; }
         public Vector2 TextureSt { get => textureSt; set => textureSt = value; }
+        public float W { get => w; set => w = value; }
 
         public Vector4 GetPointH() { return new Vector4(Point / Point.Z, 1 / Point.Z); }
         public Vector4 GetNormalH() { return new Vector4(Normal / Point.Z, 1 / Point.Z); }
         public Vector4 GetColorH()  { return new Vector4(Color / Point.Z, 1 / Point.Z);  }
-        public Vector3 GetTextureStH() { return new Vector3(TextureSt / Point.Z, 1 / Point.Z); }
-
-        public float W { get => w; set => w = value; }
+        public Vector3 GetTextureStH() { return new Vector3(TextureSt / Point.Z, 1 / Point.Z); }        
 
         public Vertex(Vector3 point, Vector3 color)
         {
@@ -39,7 +38,7 @@ namespace RealtimeRendering.Models
             Point = point;
             Color = color;
             Normal = normal;
-            W = 1;
+            W = 1; // Doesnt shrink or grow
         }
 
         public Vertex(Vector3 point, Vector2 st, Vector3 normal)
@@ -80,6 +79,7 @@ namespace RealtimeRendering.Models
             return (pt, invM);
         }
 
+        // Divide by W after all transformations
         public Vertex Project()
         {
             return new Vertex(Point / W, Color, Normal);

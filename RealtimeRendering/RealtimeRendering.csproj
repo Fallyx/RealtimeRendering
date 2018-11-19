@@ -61,6 +61,7 @@
     <Compile Include="Models\Matrix2x2.cs" />
     <Compile Include="Models\Texture.cs" />
     <Compile Include="Models\Triangle.cs" />
+    <Compile Include="Scenes\CubeScene.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
