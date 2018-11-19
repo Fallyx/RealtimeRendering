@@ -14,14 +14,13 @@ namespace RealtimeRendering.Scenes
         {
             Vector3[] cubePts = GetCubeIdx();
             Vector3[] triangleIdx = GetTrianglesIdx();
-            Vector3[] normals = GetCubeNormals();
             Triangle[] triangles = new Triangle[triangleIdx.Length];
             byte normalIdx = 0;
 
             for (int i = 0; i < triangleIdx.Length; i += 2)
             {
-                triangles[i] = new Triangle(cubePts[(int)triangleIdx[i].X], cubePts[(int)triangleIdx[i].Y], cubePts[(int)triangleIdx[i].Z], normals[normalIdx], objectColor, objectColor, objectColor);
-                triangles[i + 1] = new Triangle(cubePts[(int)triangleIdx[i + 1].X], cubePts[(int)triangleIdx[i + 1].Y], cubePts[(int)triangleIdx[i + 1].Z], normals[normalIdx], objectColor, objectColor, objectColor);
+                triangles[i] = new Triangle(cubePts[(int)triangleIdx[i].X], cubePts[(int)triangleIdx[i].Y], cubePts[(int)triangleIdx[i].Z], objectColor, objectColor, objectColor);
+                triangles[i + 1] = new Triangle(cubePts[(int)triangleIdx[i + 1].X], cubePts[(int)triangleIdx[i + 1].Y], cubePts[(int)triangleIdx[i + 1].Z], objectColor, objectColor, objectColor);
                 normalIdx++;
             }
 
@@ -32,14 +31,13 @@ namespace RealtimeRendering.Scenes
         {
             Vector3[] cubePts = GetCubeIdx();
             Vector3[] triangleIdx = GetTrianglesIdx();
-            Vector3[] normals = GetCubeNormals();
             Triangle[] triangles = new Triangle[triangleIdx.Length];
             byte normalIdx = 0;
 
             for (int i = 0; i < triangleIdx.Length; i += 2)
             {
-                triangles[i] = new Triangle(cubePts[(int)triangleIdx[i].X], cubePts[(int)triangleIdx[i].Y], cubePts[(int)triangleIdx[i].Z], normals[normalIdx], faceColors[normalIdx], faceColors[normalIdx], faceColors[normalIdx]);
-                triangles[i + 1] = new Triangle(cubePts[(int)triangleIdx[i + 1].X], cubePts[(int)triangleIdx[i + 1].Y], cubePts[(int)triangleIdx[i + 1].Z], normals[normalIdx], faceColors[normalIdx], faceColors[normalIdx], faceColors[normalIdx]);
+                triangles[i] = new Triangle(cubePts[(int)triangleIdx[i].X], cubePts[(int)triangleIdx[i].Y], cubePts[(int)triangleIdx[i].Z], faceColors[normalIdx], faceColors[normalIdx], faceColors[normalIdx]);
+                triangles[i + 1] = new Triangle(cubePts[(int)triangleIdx[i + 1].X], cubePts[(int)triangleIdx[i + 1].Y], cubePts[(int)triangleIdx[i + 1].Z], faceColors[normalIdx], faceColors[normalIdx], faceColors[normalIdx]);
                 normalIdx++;
             }
 
@@ -50,14 +48,31 @@ namespace RealtimeRendering.Scenes
         {
             Vector3[] cubePts = GetCubeIdx();
             Vector3[] triangleIdx = GetTrianglesIdx();
-            Vector3[] normals = GetCubeNormals();
             Triangle[] triangles = new Triangle[triangleIdx.Length];
             byte normalIdx = 0;
 
             for (int i = 0; i < triangleIdx.Length; i += 2)
             {
-                triangles[i] = new Triangle(cubePts[(int)triangleIdx[i].X], cubePts[(int)triangleIdx[i].Y], cubePts[(int)triangleIdx[i].Z], normals[normalIdx], vertexColors[i].A, vertexColors[i].B, vertexColors[i].C);
-                triangles[i + 1] = new Triangle(cubePts[(int)triangleIdx[i + 1].X], cubePts[(int)triangleIdx[i + 1].Y], cubePts[(int)triangleIdx[i + 1].Z], normals[normalIdx], vertexColors[i + 1].A, vertexColors[i + 1].B, vertexColors[i + 1].C);
+                triangles[i] = new Triangle(cubePts[(int)triangleIdx[i].X], cubePts[(int)triangleIdx[i].Y], cubePts[(int)triangleIdx[i].Z], vertexColors[i].A, vertexColors[i].B, vertexColors[i].C);
+                triangles[i + 1] = new Triangle(cubePts[(int)triangleIdx[i + 1].X], cubePts[(int)triangleIdx[i + 1].Y], cubePts[(int)triangleIdx[i + 1].Z], vertexColors[i + 1].A, vertexColors[i + 1].B, vertexColors[i + 1].C);
+                normalIdx++;
+            }
+
+            return triangles;
+        }
+
+        public static Triangle[] TexturedCube()
+        {
+            Vector3[] cubePts = GetCubeIdx();
+            Vector3[] triangleIdx = GetTrianglesIdx();
+            Triangle[] triangles = new Triangle[triangleIdx.Length];
+            Vector2[] textureIdx = GetTextureIdx();
+            byte normalIdx = 0;
+
+            for(int i = 0; i < triangleIdx.Length; i += 2)
+            {
+                triangles[i] = new Triangle(cubePts[(int)triangleIdx[i].X], cubePts[(int)triangleIdx[i].Y], cubePts[(int)triangleIdx[i].Z], textureIdx[0], textureIdx[1], textureIdx[2]);
+                triangles[i + 1] = new Triangle(cubePts[(int)triangleIdx[i + 1].X], cubePts[(int)triangleIdx[i + 1].Y], cubePts[(int)triangleIdx[i + 1].Z], textureIdx[3], textureIdx[4], textureIdx[5]);
                 normalIdx++;
             }
 
@@ -151,19 +166,6 @@ namespace RealtimeRendering.Scenes
                 new Vector2(0, 0),
                 new Vector2(1, 1),
                 new Vector2(1, 0)
-            };
-        }
-
-        private static Vector3[] GetCubeNormals()
-        {
-            return new Vector3[]
-            {
-                Vector3.UnitZ, // top
-                -Vector3.UnitZ, // bottom
-                -Vector3.UnitX, // left
-                Vector3.UnitX, // right
-                Vector3.UnitY, // front
-                -Vector3.UnitY // back
             };
         }
     }

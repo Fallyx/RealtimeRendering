@@ -24,14 +24,6 @@ namespace RealtimeRendering.Models
         }
         */
 
-        public Triangle(Vector3 pointA, Vector3 pointB, Vector3 pointC, Vector3 normal, Vector3 colorA, Vector3 colorB, Vector3 colorC)
-        {
-            A = new Vertex(pointA, colorA, Vector3.Normalize(normal));
-            B = new Vertex(pointB, colorB, Vector3.Normalize(normal));
-            C = new Vertex(pointC, colorC, Vector3.Normalize(normal));
-            HasTexture = false;
-        }
-
         public Triangle(Vertex vA, Vertex vB, Vertex vC, bool hasTexture)
         {
             A = vA;
@@ -40,11 +32,23 @@ namespace RealtimeRendering.Models
             HasTexture = hasTexture;
         }
 
-        public Triangle(Vector3 pointA, Vector3 pointB, Vector3 pointC, Vector3 normal, Vector2 stA, Vector2 stB, Vector2 stC)
+        public Triangle(Vector3 pointA, Vector3 pointB, Vector3 pointC, Vector3 colorA, Vector3 colorB, Vector3 colorC)
         {
-            A = new Vertex(pointA, stA, Vector3.Normalize(normal));
-            B = new Vertex(pointB, stB, Vector3.Normalize(normal));
-            C = new Vertex(pointC, stC, Vector3.Normalize(normal));
+            Vector3 normal = Vector3.Normalize(Vector3.Cross(pointB - pointA, pointC- pointA));
+
+            A = new Vertex(pointA, colorA, normal);
+            B = new Vertex(pointB, colorB, normal);
+            C = new Vertex(pointC, colorC, normal);
+            HasTexture = false;
+        }
+
+        public Triangle(Vector3 pointA, Vector3 pointB, Vector3 pointC, Vector2 stA, Vector2 stB, Vector2 stC)
+        {
+            Vector3 normal = Vector3.Normalize(Vector3.Cross(pointB - pointA, pointC - pointA));
+
+            A = new Vertex(pointA, stA, normal);
+            B = new Vertex(pointB, stB, normal);
+            C = new Vertex(pointC, stC, normal);
             HasTexture = true;
         }
 

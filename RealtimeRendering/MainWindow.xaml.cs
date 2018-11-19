@@ -25,7 +25,7 @@ namespace RealtimeRendering
         private Texture texture;
         private GBuffer gBuff;
 
-        (Vector3 pos, Vector3 color) light = (new Vector3(0, 0, 5), new Vector3(1f, 1f, 1f));
+        (Vector3 pos, Vector3 color) light = (new Vector3(0, -0.5f, 5), new Vector3(1f, 1f, 1f));
         Vector3 Eye = new Vector3(0, 0, 0);
 
         public MainWindow()
@@ -34,6 +34,7 @@ namespace RealtimeRendering
             //triangles = CubeScene.ObjectColoredCube(new Vector3(0, 0, 1));
             //triangles = CubeScene.FaceColoredCube(CubeScene.GetPredefinedFaceColors());
             triangles = CubeScene.VertexColoredCube(CubeScene.GetPredefinedVertexColors());
+            //triangles = CubeScene.TexturedCube();
 
             gBuff = new GBuffer(winWidth, winHeight);
             texture = new Texture(Texture.BrickImage());
@@ -117,7 +118,9 @@ namespace RealtimeRendering
                                     gBuff.ColorsBuffer[buffIdx] = texture.LookUp(st);
                                 }
 
-                                gBuff.NormalBuffer[buffIdx] = Vector3.Normalize(tTrans.GetNormal((float)uv.X, (float)uv.Y));
+                                //gBuff.NormalBuffer[buffIdx] = triangle.GetNormal((float)uv.X, (float)uv.Y);
+                                //gBuff.NormalBuffer[buffIdx] = Vector3.Normalize(tTrans.A.Normal);
+                                gBuff.NormalBuffer[buffIdx] = triangle.A.Normal;
                                 gBuff.PosBuffer[buffIdx] = P;
                             }
                         }
@@ -156,6 +159,7 @@ namespace RealtimeRendering
             Vector3 clr = Vector3.Zero;
 
             Vector3 normal = gBuff.NormalBuffer[buffIdx];
+            normal = Vector3.Normalize(normal);
             Vector3 pos = gBuff.PosBuffer[buffIdx];
             Vector3 c = gBuff.ColorsBuffer[buffIdx];
 
