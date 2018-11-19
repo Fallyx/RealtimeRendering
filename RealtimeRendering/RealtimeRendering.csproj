@@ -57,10 +57,9 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="Helpers\MathHelper.cs" />
+    <Compile Include="Models\GBuffer.cs" />
     <Compile Include="Models\Matrix2x2.cs" />
     <Compile Include="Models\Texture.cs" />
-    <Compile Include="Models\Triangle2D.cs" />
     <Compile Include="Models\Triangle.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>

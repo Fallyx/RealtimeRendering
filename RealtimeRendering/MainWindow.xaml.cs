@@ -4,7 +4,6 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Numerics;
 using RealtimeRendering.Models;
-using RealtimeRendering.Helpers;
 
 namespace RealtimeRendering
 {
@@ -16,11 +15,6 @@ namespace RealtimeRendering
         private float alpha = 0;
         private Triangle[] triangles;
         private WriteableBitmap wbmap;
-        private byte[] pixels1d;
-        private Vector3[] colorBuff1d;
-        private float[] zBuff1d;
-        private Vector3[] normalBuff1d;
-        private Vector3[] posBuff1d;
 
         private static int winWidth = 440;
         private static int winHeight = 440;
@@ -28,6 +22,7 @@ namespace RealtimeRendering
         private float zFar = float.NegativeInfinity;
 
         private Texture texture;
+        private GBuffer gBuff;
 
         Vector3 Light = new Vector3(0, 0, 5);
         Vector3 Eye = new Vector3(0, 0, 0);
@@ -39,11 +34,7 @@ namespace RealtimeRendering
             triangles = CreateTriangles();
             //triangles = CreateTriangles(new Vector3(0, 0, 1));
             //triangles = CreateTriangleTexture();
-            pixels1d = new byte[winWidth * winHeight * 4];
-            colorBuff1d = new Vector3[winWidth * winHeight];
-            zBuff1d = new float[winWidth * winHeight];
-            normalBuff1d = new Vector3[winWidth * winHeight];
-            posBuff1d = new Vector3[winWidth * winHeight];
+            gBuff = new GBuffer(winWidth, winHeight);
             texture = new Texture(Texture.BrickImage());
             
             wbmap = new WriteableBitmap(
@@ -65,46 +56,27 @@ namespace RealtimeRendering
         {
             alphaLabel.Content = alpha;
 
-            Array.Clear(pixels1d, 0, pixels1d.Length);
-            Array.Clear(colorBuff1d, 0, colorBuff1d.Length);
-            Array.Clear(normalBuff1d, 0, normalBuff1d.Length);
-            Array.Clear(posBuff1d, 0, posBuff1d.Length);
-
-            for (int i = 0; i < zBuff1d.Length; i++)
-            {
-                zBuff1d[i] = float.PositiveInfinity;
-            }
+            gBuff.ClearBuffers();
 
             Matrix4x4 rot = Matrix4x4.CreateFromAxisAngle(new Vector3(0, 1, 0), (float)ToRad(alpha));
             Matrix4x4 rot2 = Matrix4x4.CreateFromAxisAngle(new Vector3(1, 0, 0), (float)ToRad(alpha));
             Matrix4x4 transl = Matrix4x4.CreateTranslation(new Vector3(0, 0, 5));
-            Matrix4x4 M = rot * rot2 * transl * ProjectionMatrix();
+            Matrix4x4 M = rot * rot2 * transl;
 
             foreach (Triangle triangle in triangles)
             {
-                //Vector3 pA = MathHelper.Transform(triangle.A.Point, M);
-                //Vector3 pB = MathHelper.Transform(triangle.B.Point, M);
-                //Vector3 pC = MathHelper.Transform(triangle.C.Point, M);
+                Triangle tTrans = triangle.Transform(M);
+                Triangle tProj = tTrans.Transform(ProjectionMatrix()).Project();
 
-                Triangle t = triangle.Transform(M);
-
-                Vector3 pA = t.A.Point;
-                Vector3 pB = t.B.Point;
-                Vector3 pC = t.C.Point;
-
-                //Triangle t = new Triangle(pA, pB, pC, triangle.Normal, triangle.ColorA, triangle.ColorB, triangle.ColorC);
+                Vector3 pA = tProj.A.Point;
+                Vector3 pB = tProj.B.Point;
+                Vector3 pC = tProj.C.Point;
 
                 Vector3 AB = pB - pA;
                 Vector3 AC = pC - pA;
 
                 Vector3 backface = Vector3.Cross(new Vector3(AB.X, AB.Y, 0), new Vector3(AC.X, AC.Y, 0));
                 if (backface.Z < 0) continue;
-
-                //t.TransformNormal(M);
-                t.SetColorsH(backface.Z);
-
-                //Vector3 AB = t.PointB - t.PointA;
-                //Vector3 AC = t.PointC - t.PointA;
 
                 Matrix2x2 m = new Matrix2x2(AB.X, AC.X, AB.Y, AC.Y);
                 Matrix2x2 invM = Matrix2x2.Inverse(m);
@@ -118,90 +90,52 @@ namespace RealtimeRendering
                 {
                     for (int px = minX; px < maxX; px++)
                     {
-                        //Vector2 AP = new Vector2(px - t.PointA.X, py - t.PointA.Y);
                         Vector3 AP = new Vector3(px, py, 0) - pA;
                         Vector uv = new Vector(invM.M11 * AP.X + invM.M12 * AP.Y, invM.M21 * AP.X + invM.M22 * AP.Y);
 
                         if (uv.X >= 0 && uv.Y >= 0 && (uv.X + uv.Y) < 1)
                         {
-                            //float depth = (float)(pA.Z + AB.Z * uv.X + AC.Z * uv.Y);
-                            Vector3 P = t.GetPoint((float)uv.X, (float)uv.Y);
+                            Vector3 P = tTrans.GetPoint((float)uv.X, (float)uv.Y);
                             float depth = P.Z;
 
                             int buffIdx = py * winWidth + px;
 
-                            if (zBuff1d[buffIdx] > depth)
+                            if (gBuff.ZBuffer[buffIdx] > depth)
                             {
-                                zBuff1d[buffIdx] = depth;
+                                gBuff.ZBuffer[buffIdx] = depth;
                                 zNear = Math.Min(zNear, depth);
                                 zFar = Math.Max(zFar, depth);
 
-                                // Vector3 c = triangle.InterpolateColor((float)uv.X, (float)uv.Y);
-                                if(!t.HasTexture)
+                                if(!tTrans.HasTexture)
                                 {
-                                    Vector3 c = t.GetColor((float)uv.X, (float)uv.Y, backface.Z);
+                                    Vector3 c = tTrans.GetColor((float)uv.X, (float)uv.Y);
 
-                                    colorBuff1d[buffIdx] = c;
+                                    gBuff.ColorsBuffer[buffIdx] = c;
                                 }
                                 else
                                 {
-                                    Vector3 stAH = new Vector3(t.A.TextureSt / backface.Z, 1 / backface.Z);
-                                    Vector3 stBH = new Vector3(t.B.TextureSt / backface.Z, 1 / backface.Z);
-                                    Vector3 stCH = new Vector3(t.B.TextureSt / backface.Z, 1 / backface.Z);
+                                    Vector2 lu = tTrans.GetTexture((float)uv.X, (float)uv.Y);
 
-                                    Vector3 stH = new Vector3(stAH.X + (float)uv.X * (stBH.X - stAH.X) + (float)uv.Y * (stCH.X - stAH.X),
-                                        stAH.Y + (float)uv.X * (stBH.Y - stAH.Y) + (float)uv.Y * (stCH.Y - stAH.Y),
-                                        stAH.Z + (float)uv.X * (stBH.Z - stAH.Z) + (float)uv.Y * (stCH.Z - stAH.Z));
-
-                                    Vector2 lu = new Vector2(stH.X, stH.Y);
-
-                                    colorBuff1d[buffIdx] = texture.LookUp(lu);
+                                    gBuff.ColorsBuffer[buffIdx] = texture.LookUp(lu);
                                 }
-                                
-                                //Vector3 norm = Vector3.TransformNormal(triangle.Normal, M); 
-                                Vector3 norm = t.GetNormal((float)uv.X, (float)uv.Y);
-                                //Vector3 normh = triangle.GetNormal4((float)uv.X, (float)uv.Y, M);
 
-                                //normalBuff1d[buffIdx] = Vector3.TransformNormal(norm, M);
-                                normalBuff1d[buffIdx] = norm;
-                                //triangle.TransformNormal(M);
-                                //normalBuff1d[buffIdx] = triangle.Normal;
-                                posBuff1d[buffIdx] = P;
-                                    
-                                    
-                                //SavePixel1d((py * winWidth + px) * 4, c);
+                                gBuff.NormalBuffer[buffIdx] = tTrans.GetNormal((float)uv.X, (float)uv.Y);
+                                gBuff.PosBuffer[buffIdx] = P;
                             }
                         }
                     }
                 }
-                
             }
-
             
             for (int y = 0; y < winHeight; y++)
             {
                 for(int x = 0; x < winWidth; x++)
                 {
                     int buffIdx = y * winWidth + x;
-                    float f = zBuff1d[buffIdx];
+                    float f = gBuff.ZBuffer[buffIdx];
                     if (!float.IsInfinity(f))
                     {
-                        
-                        Vector3 normal = normalBuff1d[buffIdx];
-                        Vector3 pos = posBuff1d[buffIdx];
-                        Vector3 c = colorBuff1d[buffIdx];
-
-                        // Vector3 diff = Diffuse(pos, normal, c);
-                        Vector3 PL = Vector3.Normalize(Light - pos);
-                        float diff = Math.Max(Vector3.Dot(normal, PL), 0);
-                        float spec = Specular(pos, normal);
-
-                        Vector3 pxlClr = new Vector3(0.1f, 0.1f, 0.1f) * new Vector3(c.X + diff, c.Y + diff, c.Z + diff) * new Vector3(c.X + spec, c.Y + spec, c.Z + spec);
-                        
-
-                        //Vector3 pxlClr = colorBuff1d[buffIdx];
-
-                        SavePixel1d(buffIdx * 4, pxlClr);
+                        DrawDifSpecColor(buffIdx);
                     }
                 }
             }
@@ -209,15 +143,45 @@ namespace RealtimeRendering
 
             Int32Rect rect = new Int32Rect(0, 0, winWidth, winHeight);
             int stride = 4 * winWidth;
-            wbmap.WritePixels(rect, pixels1d, stride, 0);
+            wbmap.WritePixels(rect, gBuff.PixelsBuffer, stride, 0);
 
             alpha = (alpha + 1) % 360;
+        }
+
+        private void DrawColor(int buffIdx)
+        {
+            Vector3 pxlClr = gBuff.ColorsBuffer[buffIdx];
+            SavePixel(buffIdx * 4, pxlClr);
+        }
+
+        private void DrawDifSpecColor(int buffIdx)
+        {
+            Vector3 normal = gBuff.NormalBuffer[buffIdx];
+            Vector3 pos = gBuff.PosBuffer[buffIdx];
+            Vector3 c = gBuff.ColorsBuffer[buffIdx];
+
+            Vector3 diff = Diffuse(pos, normal, c);
+            Vector3 PL = Vector3.Normalize(Light - pos);
+            //float diff = Math.Max(Vector3.Dot(normal, PL), 0);
+            float spec = Specular(pos, normal);
+
+            //Vector3 pxlClr = new Vector3(0.1f + c.X * diff.X + spec, 0.1f + c.Y * diff.Y + spec, 0.1f + c.Z * diff.Z + spec);
+            Vector3 pxlClr = new Vector3(0.1f, 0.1f, 0.1f) * new Vector3(c.X + diff.X, c.Y + diff.Y, c.Z + diff.Z) * new Vector3(c.X + spec, c.Y + spec, c.Z + spec);
+
+            SavePixel(buffIdx * 4, pxlClr);
+        }
+
+        private void DrawZBuff(int buffIdx)
+        {
+            float pxlClrZ = gBuff.ZBuffer[buffIdx];
+
+            SavePixelZ(buffIdx * 4, pxlClrZ);
         }
 
         private Vector3 Diffuse(Vector3 point, Vector3 normal, Vector3 color)
         {
             Vector3 diff = Vector3.Zero;
-            Vector3 lightClr = new Vector3(0.3f, 0.3f, 0.3f);
+            Vector3 lightClr = new Vector3(1f, 1f, 1f);
 
             Vector3 PL = Vector3.Normalize(Light - point);
 
@@ -238,27 +202,27 @@ namespace RealtimeRendering
             Vector3 spec = Vector3.Normalize(2 * Vector3.Dot(PL, normal) * normal - PL);
             Vector3 EL = Vector3.Normalize(Eye - point);
 
-            return (float) Math.Pow(Math.Min(0, Vector3.Dot(spec, EL)), 50);
+            return (float) Math.Pow(Math.Min(0, Vector3.Dot(spec, EL)), 80);
         }
 
-        private void SavePixel1d(int index, Vector3 color)
+        private void SavePixel(int index, Vector3 color)
         {
             Color c = Color.FromScRgb(1, color.Z, color.Y, color.X);
 
-            pixels1d[index] = c.B; // (byte)(color.X * 255); // b
-            pixels1d[index + 1] = c.G; // (byte)(color.Y * 255); // g
-            pixels1d[index + 2] = c.R;  //(byte)(color.Z * 255); // r
-            pixels1d[index + 3] = 255;
+            gBuff.PixelsBuffer[index] = c.B;
+            gBuff.PixelsBuffer[index + 1] = c.G;
+            gBuff.PixelsBuffer[index + 2] = c.R;
+            gBuff.PixelsBuffer[index + 3] = 255;
         }
 
-        private void SavePixel1dZ(int index, float z)
+        private void SavePixelZ(int index, float z)
         {
             // (int)((z - z.Min) / (z.Max - z.Min) * 255) * 0x010101
             int zColor = (int)((z - zFar) / (zNear - zFar) * 255) * 0x010101;
-            pixels1d[index] = (byte)zColor; // b
-            pixels1d[index + 1] = (byte)zColor; // g
-            pixels1d[index + 2] = (byte)zColor; // r
-            pixels1d[index + 3] = 255;
+            gBuff.PixelsBuffer[index] = (byte)zColor; // b
+            gBuff.PixelsBuffer[index + 1] = (byte)zColor; // g
+            gBuff.PixelsBuffer[index + 2] = (byte)zColor; // r
+            gBuff.PixelsBuffer[index + 3] = 255;
         }
 
         /*

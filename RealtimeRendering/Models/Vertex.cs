@@ -20,10 +20,10 @@ namespace RealtimeRendering.Models
         public Vector3 Normal { get => normal; set => normal = value; }
         public Vector2 TextureSt { get => textureSt; set => textureSt = value; }
 
-        public Vector4 PointH { get { return new Vector4(Point / Point.Z, 1 / Point.Z); } }
-        public Vector4 NormalH { get { return new Vector4(Normal / Point.Z, 1 / Point.Z); } }
-        public Vector4 ColorH { get { return new Vector4(Color / Point.Z, 1 / Point.Z); } }
-        public Vector3 TextureStH { get { return new Vector3(TextureSt / Point.Z, 1 / Point.Z); } }
+        public Vector4 GetPointH() { return new Vector4(Point / Point.Z, 1 / Point.Z); }
+        public Vector4 GetNormalH() { return new Vector4(Normal / Point.Z, 1 / Point.Z); }
+        public Vector4 GetColorH()  { return new Vector4(Color / Point.Z, 1 / Point.Z);  }
+        public Vector3 GetTextureStH() { return new Vector3(TextureSt / Point.Z, 1 / Point.Z); }
 
         public float W { get => w; set => w = value; }
 
@@ -52,15 +52,42 @@ namespace RealtimeRendering.Models
 
         public Vertex Transform(Matrix4x4 m)
         {
+            (Vector4 pt, Matrix4x4 invM) = Trans(m);
+
+            Vertex v = new Vertex(new Vector3(pt.X, pt.Y, pt.Z), Color, Vector3.Normalize(Vector3.TransformNormal(Normal, invM)));
+            v.W = pt.W;
+
+            return v;
+        }
+
+        public Vertex TransformTexture(Matrix4x4 m)
+        {
+            (Vector4 pt, Matrix4x4 invM) = Trans(m);
+
+            Vertex v = new Vertex(new Vector3(pt.X, pt.Y, pt.Z), TextureSt, Vector3.Normalize(Vector3.TransformNormal(Normal, invM)));
+            v.W = pt.W;
+
+            return v;
+        }
+
+        private (Vector4, Matrix4x4) Trans(Matrix4x4 m)
+        {
             Vector4 pt = Vector4.Transform(Point, m);
 
             Matrix4x4.Invert(m, out Matrix4x4 invM);
             invM = Matrix4x4.Transpose(invM);
 
-            Vertex v = new Vertex(new Vector3(pt.X / pt.W, pt.Y / pt.W, pt.Z / pt.W), Color, Vector3.Normalize(Vector3.TransformNormal(Normal, invM)));
-            v.W = pt.W;
+            return (pt, invM);
+        }
 
-            return v;
+        public Vertex Project()
+        {
+            return new Vertex(Point / W, Color, Normal);
+        }
+
+        public Vertex ProjectTexture()
+        {
+            return new Vertex(Point / W, TextureSt, Normal);
         }
     }
 }
