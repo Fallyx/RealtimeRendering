@@ -1,28 +1,13 @@
-﻿using System;
-using System.Numerics;
-using System.Windows.Media;
+﻿using System.Numerics;
 
 namespace RealtimeRendering.Models
 {
     public class Triangle
     {
-        #region Vars
         private Vertex vA;
         private Vertex vB;
         private Vertex vC;
-
         private bool hasTexture;
-        #endregion
-
-        /*
-        public Triangle(Vector3 pointA, Vector3 pointB, Vector3 pointC, Brush bColor)
-        {
-            PointA = pointA;
-            PointB = pointB;
-            PointC = pointC;
-            BColor = bColor;
-        }
-        */
 
         public Triangle(Vertex vA, Vertex vB, Vertex vC, bool hasTexture)
         {
@@ -52,12 +37,10 @@ namespace RealtimeRendering.Models
             HasTexture = true;
         }
 
-        #region getter and setters
         public Vertex A { get => vA; set => vA = value; }
         public Vertex B { get => vB; set => vB = value; }
         public Vertex C { get => vC; set => vC = value; }
         public bool HasTexture { get => hasTexture; private set => hasTexture = value; }
-        #endregion
 
         public Vector3 GetColor(float u, float v)
         {

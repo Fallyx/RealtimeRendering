@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Numerics;
+﻿using System.Numerics;
 
 namespace RealtimeRendering.Models
 {
@@ -25,13 +20,6 @@ namespace RealtimeRendering.Models
         public Vector4 GetNormalH() { return new Vector4(Normal / Point.Z, 1 / Point.Z); }
         public Vector4 GetColorH()  { return new Vector4(Color / Point.Z, 1 / Point.Z);  }
         public Vector3 GetTextureStH() { return new Vector3(TextureSt / Point.Z, 1 / Point.Z); }        
-
-        public Vertex(Vector3 point, Vector3 color)
-        {
-            Point = point;
-            Color = color;
-            W = 1;
-        }
 
         public Vertex(Vector3 point, Vector3 color, Vector3 normal)
         {

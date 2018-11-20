@@ -25,7 +25,7 @@ namespace RealtimeRendering
         private Texture texture;
         private GBuffer gBuff;
 
-        (Vector3 pos, Vector3 color) light = (new Vector3(0, -0.5f, 5), new Vector3(1f, 1f, 1f));
+        (Vector3 pos, Vector3 color) light = (new Vector3(0, -0.5f, 5), new Vector3(0.8f, 0.8f, 0.8f));
         Vector3 Eye = new Vector3(0, 0, 0);
 
         public MainWindow()
@@ -118,9 +118,7 @@ namespace RealtimeRendering
                                     gBuff.ColorsBuffer[buffIdx] = texture.LookUp(st);
                                 }
 
-                                //gBuff.NormalBuffer[buffIdx] = triangle.GetNormal((float)uv.X, (float)uv.Y);
-                                //gBuff.NormalBuffer[buffIdx] = Vector3.Normalize(tTrans.A.Normal);
-                                gBuff.NormalBuffer[buffIdx] = triangle.A.Normal;
+                                gBuff.NormalBuffer[buffIdx] = tTrans.GetNormal((float)uv.X, (float)uv.Y);
                                 gBuff.PosBuffer[buffIdx] = P;
                             }
                         }
@@ -147,6 +145,7 @@ namespace RealtimeRendering
 
             alpha = (alpha + 1) % 360;
         }
+        
 
         private void DrawColor(int buffIdx)
         {
@@ -186,8 +185,7 @@ namespace RealtimeRendering
 
             if(nL >= 0)
             {
-                Vector3 il = Vector3.Multiply(light.color, color);
-                diff = Vector3.Multiply(il, nL);
+                diff = (light.color * color) * nL;
             }
 
             return diff;
@@ -200,9 +198,9 @@ namespace RealtimeRendering
 
             if (nL >= 0)
             {
-                Vector3 r = PL - (2f * (PL - (Vector3.Dot(PL, normal) * normal)));
+                Vector3 r = 2 * Vector3.Dot(PL, normal) * normal - PL;
 
-                Vector3 EL = Vector3.Normalize(Eye - point);
+                Vector3 EL = Vector3.Normalize(point - Eye);
 
                 float rEL = Vector3.Dot(Vector3.Normalize(r), EL);
                 rEL = (float)Math.Pow(rEL, 50);
@@ -225,7 +223,6 @@ namespace RealtimeRendering
 
         private void SavePixelZ(int index, float z)
         {
-            // (int)((z - z.Min) / (z.Max - z.Min) * 255) * 0x010101
             int zColor = (int)((z - zFar) / (zNear - zFar) * 255) * 0x010101;
             gBuff.PixelsBuffer[index] = (byte)zColor; // b
             gBuff.PixelsBuffer[index + 1] = (byte)zColor; // g
