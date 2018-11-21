@@ -20,11 +20,13 @@ namespace RealtimeRendering.Models
             Rectangle rect = new Rectangle(0, 0, Img.Width, Img.Height);
             BitmapData bmpData = Img.LockBits(rect, ImageLockMode.ReadOnly, Img.PixelFormat);
 
-            int bytes = Math.Abs(bmpData.Stride) * Img.Height;
+            int bytes = bmpData.Stride * Img.Height;
             BmpColors = new byte[bytes];
 
+            // Get the address of the first line.
             IntPtr ptr = bmpData.Scan0;
 
+            // Copy color values 
             Marshal.Copy(ptr, BmpColors, 0, bytes);
 
             Img.UnlockBits(bmpData);
@@ -44,10 +46,9 @@ namespace RealtimeRendering.Models
             int si = Math.Min((int)(s * Img.Width) & (Img.Width - 1), Img.Width - 2);
             int ti = Math.Min((int)(t * Img.Height) & (Img.Height - 1), Img.Height - 2);
 
-            Color clrST = Img.GetPixel(si, ti);
+            Vector3 clrST = GetPixel(si, ti);
 
-            Media.Color cST = Media.Color.FromRgb(clrST.R, clrST.G, clrST.B);
-            textureClr = new Vector3(cST.B / 255f, cST.G / 255f, cST.R / 255f);
+            textureClr = clrST;
 
             return textureClr;
         }
@@ -81,18 +82,23 @@ namespace RealtimeRendering.Models
         public Vector3 GetPixel(int x, int y)
         {
             int idx = (y * Img.Height + x) * 3;
-            byte r = BmpColors[idx];
+            byte b = BmpColors[idx];
             byte g = BmpColors[idx + 1];
-            byte b = BmpColors[idx + 2];
+            byte r = BmpColors[idx + 2];
 
             Media.Color clr = Media.Color.FromRgb(r, g, b);
 
-            return new Vector3(clr.R / 255f, clr.G / 255f, clr.B / 255f);
+            return new Vector3(clr.B / 255f, clr.G / 255f, clr.R / 255f);
         }
 
         public static string BrickImage()
         {
             return  @"Textures\bricks.jpg";
+        }
+
+        public static string RedImage()
+        {
+            return @"Textures\red.png";
         }
     }
 }

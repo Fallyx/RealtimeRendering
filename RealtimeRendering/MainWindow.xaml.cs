@@ -31,10 +31,13 @@ namespace RealtimeRendering
         public MainWindow()
         {
             InitializeComponent();
+
+            #region Scenes
             //triangles = CubeScene.ObjectColoredCube(new Vector3(0, 0, 1));
             //triangles = CubeScene.FaceColoredCube(CubeScene.GetPredefinedFaceColors());
             //triangles = CubeScene.VertexColoredCube(CubeScene.GetPredefinedVertexColors());
             triangles = CubeScene.TexturedCube();
+            #endregion
 
             gBuff = new GBuffer(winWidth, winHeight);
             texture = new Texture(Texture.BrickImage());
@@ -60,7 +63,7 @@ namespace RealtimeRendering
 
             Matrix4x4 rot = Matrix4x4.CreateFromAxisAngle(new Vector3(0, 1, 0), (float)ToRad(alpha));
             Matrix4x4 rot2 = Matrix4x4.CreateFromAxisAngle(new Vector3(1, 0, 0), (float)ToRad(alpha));
-            Matrix4x4 transl = Matrix4x4.CreateTranslation(new Vector3(0, 0, 5));
+            Matrix4x4 transl = Matrix4x4.CreateTranslation(new Vector3(0, 0, 5)); // Theta translation
             Matrix4x4 M = rot * rot2 * transl;
 
             foreach (Triangle triangle in triangles)
@@ -76,6 +79,7 @@ namespace RealtimeRendering
                 Vector3 backface = Vector3.Cross(new Vector3(AB.X, AB.Y, 0), new Vector3(AC.X, AC.Y, 0));
                 if (backface.Z < 0) continue;
 
+                // Bounding Box
                 int minX = (int)Math.Max(0, Math.Min(tProj.A.Point.X, Math.Min(tProj.B.Point.X, tProj.C.Point.X)));
                 int maxX = (int)Math.Min(winWidth, Math.Max(tProj.A.Point.X, Math.Max(tProj.B.Point.X, tProj.C.Point.X)));
                 int minY = (int)Math.Max(0, Math.Min(tProj.A.Point.Y, Math.Min(tProj.B.Point.Y, tProj.C.Point.Y)));
@@ -87,14 +91,12 @@ namespace RealtimeRendering
                     {
                         // Matrix for Barycentric Coordinates
                         Matrix2x2 m = new Matrix2x2(AB.X, AC.X, AB.Y, AC.Y);
-                        Matrix2x2 invM = Matrix2x2.Inverse(m);
-
                         Vector3 AP = new Vector3(px, py, 0) - tProj.A.Point;
-                        Vector uv = new Vector(invM.M11 * AP.X + invM.M12 * AP.Y, invM.M21 * AP.X + invM.M22 * AP.Y);
+                        Vector2 uv = m.GetUV(AP);
 
                         if (uv.X >= 0 && uv.Y >= 0 && (uv.X + uv.Y) < 1)
                         {
-                            Vector3 P = tTrans.GetPoint((float)uv.X, (float)uv.Y);
+                            Vector3 P = tTrans.GetPoint(uv.X, uv.Y);
                             float depth = P.Z;
 
                             int buffIdx = py * winWidth + px;
@@ -107,17 +109,17 @@ namespace RealtimeRendering
 
                                 if(!tTrans.HasTexture)
                                 {
-                                    Vector3 c = tTrans.GetColor((float)uv.X, (float)uv.Y);
+                                    Vector3 c = tTrans.GetColor(uv.X, uv.Y);
                                     gBuff.ColorsBuffer[buffIdx] = c;
                                 }
                                 else
                                 {
-                                    Vector2 st = tTrans.GetTexture((float)uv.X, (float)uv.Y);
+                                    Vector2 st = tTrans.GetTexture(uv.X, uv.Y);
                                     //gBuff.ColorsBuffer[buffIdx] = texture.LookUp(st);
                                     gBuff.ColorsBuffer[buffIdx] = texture.LookUpBilinear(st);
                                 }
 
-                                gBuff.NormalBuffer[buffIdx] = tTrans.GetNormal((float)uv.X, (float)uv.Y);
+                                gBuff.NormalBuffer[buffIdx] = tTrans.GetNormal(uv.X, uv.Y);
                                 gBuff.PosBuffer[buffIdx] = P;
                             }
                         }
@@ -145,7 +147,6 @@ namespace RealtimeRendering
             alpha = (alpha + 1) % 360;
         }
         
-
         private void DrawColor(int buffIdx)
         {
             Vector3 pxlClr = gBuff.ColorsBuffer[buffIdx];
@@ -210,6 +211,7 @@ namespace RealtimeRendering
             return spec;
         }
 
+        // Draw Color
         private void SavePixel(int index, Vector3 color)
         {
             Color c = Color.FromScRgb(1, color.Z, color.Y, color.X);
@@ -220,6 +222,7 @@ namespace RealtimeRendering
             gBuff.PixelsBuffer[index + 3] = 255;
         }
 
+        // Draw Z-Buffer
         private void SavePixelZ(int index, float z)
         {
             int zColor = (int)((z - zFar) / (zNear - zFar) * 255) * 0x010101;

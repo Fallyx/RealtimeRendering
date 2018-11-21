@@ -1,4 +1,6 @@
-﻿namespace RealtimeRendering.Models
+﻿using System.Numerics;
+
+namespace RealtimeRendering.Models
 {
     class Matrix2x2
     {
@@ -20,18 +22,25 @@
         public double M21 { get => m21; set => m21 = value; }
         public double M22 { get => m22; set => m22 = value; }
 
-        public static Matrix2x2 Inverse(Matrix2x2 m)
+        public Vector2 GetUV(Vector3 AP)
         {
-            if ((m.M11 * m.M22 - m.M12 * m.M21) == 0) return m;
+            Matrix2x2 invM = Inverse();
 
-            double det = 1f / (m.M11 * m.M22 - m.M12 * m.M21);
+            return new Vector2((float)(invM.M11 * AP.X + invM.M12 * AP.Y), (float)(invM.M21 * AP.X + invM.M22 * AP.Y));
+        }
 
-            double d = det * m.M22;
-            double b = det * (m.M12 * -1);
-            double c = det * (m.M21 * -1);
-            double a = det * m.M11;
+        private Matrix2x2 Inverse()
+        {
+            if ((M11 * M22 - M12 * M21) == 0) return new Matrix2x2(M11, M12, M21, M22);
+
+            double det = 1f / (M11 * M22 - M12 * M21);
+
+            double d = det * M22;
+            double b = det * (M12 * -1);
+            double c = det * (M21 * -1);
+            double a = det * M11;
 
             return new Matrix2x2(d, b, c, a);
-        }
+        }        
     }
 }
