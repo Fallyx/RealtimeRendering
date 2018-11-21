@@ -22,6 +22,11 @@ namespace RealtimeRendering.Models
         public double M21 { get => m21; set => m21 = value; }
         public double M22 { get => m22; set => m22 = value; }
 
+        /// <summary>
+        /// Calculate the U and V for the AP vector
+        /// </summary>
+        /// <param name="AP"></param>
+        /// <returns>Vector2 with u as X and v as Y</returns>
         public Vector2 GetUV(Vector3 AP)
         {
             Matrix2x2 invM = Inverse();
@@ -29,6 +34,10 @@ namespace RealtimeRendering.Models
             return new Vector2((float)(invM.M11 * AP.X + invM.M12 * AP.Y), (float)(invM.M21 * AP.X + invM.M22 * AP.Y));
         }
 
+        /// <summary>
+        /// Inverts the matrix and a new one
+        /// </summary>
+        /// <returns>Inverted matrix</returns>
         private Matrix2x2 Inverse()
         {
             if ((M11 * M22 - M12 * M21) == 0) return new Matrix2x2(M11, M12, M21, M22);

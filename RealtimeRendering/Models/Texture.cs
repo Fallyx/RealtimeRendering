@@ -23,10 +23,10 @@ namespace RealtimeRendering.Models
             int bytes = bmpData.Stride * Img.Height;
             BmpColors = new byte[bytes];
 
-            // Get the address of the first line.
+            // Get the address of the first line
             IntPtr ptr = bmpData.Scan0;
 
-            // Copy color values 
+            // Copy color values into the array
             Marshal.Copy(ptr, BmpColors, 0, bytes);
 
             Img.UnlockBits(bmpData);
@@ -36,6 +36,11 @@ namespace RealtimeRendering.Models
         public Bitmap Img { get => img; set => img = value; }
         public byte[] BmpColors { get => bmpColors; set => bmpColors = value; }
 
+        /// <summary>
+        /// Get the color from the texture
+        /// </summary>
+        /// <param name="tc"></param>
+        /// <returns>Vector3 texture color</returns>
         public Vector3 LookUp(Vector2 tc)
         {
             Vector3 textureClr = Vector3.One;
@@ -53,6 +58,11 @@ namespace RealtimeRendering.Models
             return textureClr;
         }
 
+        /// <summary>
+        /// Get the color from the texture with bilinear filter
+        /// </summary>
+        /// <param name="tc"></param>
+        /// <returns>Vector3 texture color bilinear filtered</returns>
         public Vector3 LookUpBilinear(Vector2 tc)
         {
             Vector3 yellowLine = Vector3.One;
@@ -79,7 +89,13 @@ namespace RealtimeRendering.Models
             return yellowLine;
         }
 
-        public Vector3 GetPixel(int x, int y)
+        /// <summary>
+        /// Get the pixel color from the color array
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <returns></returns>
+        private Vector3 GetPixel(int x, int y)
         {
             int idx = (y * Img.Height + x) * 3;
             byte b = BmpColors[idx];

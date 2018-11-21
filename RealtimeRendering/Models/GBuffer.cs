@@ -26,6 +26,9 @@ namespace RealtimeRendering.Models
         public Vector3[] NormalBuffer { get => normalBuff; set => normalBuff = value; }
         public Vector3[] PosBuffer { get => posBuff; set => posBuff = value; }
 
+        /// <summary>
+        /// Clear the G-Buffers and set the Z-Buffer values to Positive Infinity
+        /// </summary>
         public void ClearBuffers()
         {
             Array.Clear(PixelsBuffer, 0, PixelsBuffer.Length);

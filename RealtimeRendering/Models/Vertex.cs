@@ -37,6 +37,11 @@ namespace RealtimeRendering.Models
             W = 1;
         }
 
+        /// <summary>
+        /// Transform the vertex with the matrix
+        /// </summary>
+        /// <param name="m"></param>
+        /// <returns>New vertex</returns>
         public Vertex Transform(Matrix4x4 m)
         {
             (Vector4 pt, Matrix4x4 invM) = Trans(m);
@@ -47,6 +52,11 @@ namespace RealtimeRendering.Models
             return v;
         }
 
+        /// <summary>
+        /// Transform the vertex with the matrix
+        /// </summary>
+        /// <param name="m"></param>
+        /// <returns>New vertex</returns>
         public Vertex TransformTexture(Matrix4x4 m)
         {
             (Vector4 pt, Matrix4x4 invM) = Trans(m);
@@ -57,6 +67,11 @@ namespace RealtimeRendering.Models
             return v;
         }
 
+        /// <summary>
+        /// Transform the point and invert the matrix
+        /// </summary>
+        /// <param name="m"></param>
+        /// <returns>Tuple with new point and inverted matrix</returns>
         private (Vector4, Matrix4x4) Trans(Matrix4x4 m)
         {
             Vector4 pt = Vector4.Transform(Point, m);
@@ -67,12 +82,19 @@ namespace RealtimeRendering.Models
             return (pt, invM);
         }
 
-        // Divide by W after all transformations
+        /// <summary>
+        /// Divide the point by W
+        /// </summary>
+        /// <returns>New vertex</returns>
         public Vertex Project()
         {
             return new Vertex(Point / W, Color, Normal);
         }
 
+        /// <summary>
+        /// Divide the point by W
+        /// </summary>
+        /// <returns>New vertex</returns>
         public Vertex ProjectTexture()
         {
             return new Vertex(Point / W, TextureSt, Normal);
