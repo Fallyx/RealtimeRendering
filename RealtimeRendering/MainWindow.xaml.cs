@@ -17,15 +17,15 @@ namespace RealtimeRendering
         private Triangle[] triangles;
         private WriteableBitmap wbmap;
 
-        private static int winWidth = 440;
-        private static int winHeight = 440;
+        private static int winWidth = 300;
+        private static int winHeight = 300;
         private float zNear = float.PositiveInfinity;
         private float zFar = float.NegativeInfinity;
 
         private Texture texture;
         private GBuffer gBuff;
 
-        (Vector3 pos, Vector3 color) light = (new Vector3(0, -0.5f, 5), new Vector3(0.8f, 0.8f, 0.8f));
+        (Vector3 pos, Vector3 color) light = (new Vector3(0, -0.5f, 5), new Vector3(0.5f, 0.5f, 0.5f));
         Vector3 Eye = new Vector3(0, 0, 0);
 
         public MainWindow()
@@ -33,8 +33,8 @@ namespace RealtimeRendering
             InitializeComponent();
             //triangles = CubeScene.ObjectColoredCube(new Vector3(0, 0, 1));
             //triangles = CubeScene.FaceColoredCube(CubeScene.GetPredefinedFaceColors());
-            triangles = CubeScene.VertexColoredCube(CubeScene.GetPredefinedVertexColors());
-            //triangles = CubeScene.TexturedCube();
+            //triangles = CubeScene.VertexColoredCube(CubeScene.GetPredefinedVertexColors());
+            triangles = CubeScene.TexturedCube();
 
             gBuff = new GBuffer(winWidth, winHeight);
             texture = new Texture(Texture.BrickImage());
@@ -108,14 +108,13 @@ namespace RealtimeRendering
                                 if(!tTrans.HasTexture)
                                 {
                                     Vector3 c = tTrans.GetColor((float)uv.X, (float)uv.Y);
-
                                     gBuff.ColorsBuffer[buffIdx] = c;
                                 }
                                 else
                                 {
                                     Vector2 st = tTrans.GetTexture((float)uv.X, (float)uv.Y);
-
-                                    gBuff.ColorsBuffer[buffIdx] = texture.LookUp(st);
+                                    //gBuff.ColorsBuffer[buffIdx] = texture.LookUp(st);
+                                    gBuff.ColorsBuffer[buffIdx] = texture.LookUpBilinear(st);
                                 }
 
                                 gBuff.NormalBuffer[buffIdx] = tTrans.GetNormal((float)uv.X, (float)uv.Y);
