@@ -25,7 +25,7 @@ namespace RealtimeRendering
         private Texture texture;
         private GBuffer gBuff;
 
-        (Vector3 pos, Vector3 color) light = (new Vector3(0, -0.5f, 5), new Vector3(0.5f, 0.5f, 0.5f));
+        (Vector3 pos, Vector3 color) light = (new Vector3(0, 0, -5), new Vector3(0.5f, 0.5f, 0.5f));
         Vector3 Eye = new Vector3(0, 0, 0);
 
         public MainWindow()
@@ -34,9 +34,9 @@ namespace RealtimeRendering
 
             #region Scenes
             //triangles = CubeScene.ObjectColoredCube(new Vector3(0, 0, 1));
-            //triangles = CubeScene.FaceColoredCube(CubeScene.GetPredefinedFaceColors());
+            triangles = CubeScene.FaceColoredCube(CubeScene.GetPredefinedFaceColors());
             //triangles = CubeScene.VertexColoredCube(CubeScene.GetPredefinedVertexColors());
-            triangles = CubeScene.TexturedCube();
+            //triangles = CubeScene.TexturedCube();
             #endregion
 
             gBuff = new GBuffer(winWidth, winHeight);
@@ -135,6 +135,8 @@ namespace RealtimeRendering
                     float f = gBuff.ZBuffer[buffIdx];
                     if (!float.IsInfinity(f))
                     {
+                        //DrawColor(buffIdx);
+                        //DrawZBuff(buffIdx);
                         DrawDifSpecColor(buffIdx);
                     }
                 }
@@ -158,7 +160,6 @@ namespace RealtimeRendering
             Vector3 clr = Vector3.Zero;
 
             Vector3 normal = gBuff.NormalBuffer[buffIdx];
-            normal = Vector3.Normalize(normal);
             Vector3 pos = gBuff.PosBuffer[buffIdx];
             Vector3 c = gBuff.ColorsBuffer[buffIdx];
 
@@ -166,7 +167,7 @@ namespace RealtimeRendering
             Vector3 diff = Diffuse(pos, normal, c, PL);
             Vector3 spec = Specular(pos, normal, PL);
 
-            Vector3 pxlClr = diff * c + spec;
+            Vector3 pxlClr = diff + spec;
 
             SavePixel(buffIdx * 4, pxlClr);
         }
@@ -181,11 +182,11 @@ namespace RealtimeRendering
         private Vector3 Diffuse(Vector3 point, Vector3 normal, Vector3 color, Vector3 PL)
         {
             Vector3 diff = Vector3.Zero;
-            float nL = Vector3.Dot(normal, PL);
+            float nL = Vector3.Dot(normal, PL) * -1;
 
             if(nL >= 0)
             {
-                diff = (light.color * color) * nL;
+                diff = light.color * color * nL;
             }
 
             return diff;
@@ -194,20 +195,23 @@ namespace RealtimeRendering
         private Vector3 Specular(Vector3 point, Vector3 normal, Vector3 PL)
         {
             Vector3 spec = Vector3.Zero;
-            float nL = Vector3.Dot(normal, PL);
+            float nL = Vector3.Dot(normal, PL) * -1;
 
             if (nL >= 0)
             {
-                Vector3 r = 2 * Vector3.Dot(PL, normal) * normal - PL;
+                Vector3 s = PL - Vector3.Dot(PL, normal) * normal;
+                Vector3 r = Vector3.Normalize(PL - 2 * s);
 
                 Vector3 EL = Vector3.Normalize(point - Eye);
 
-                float rEL = Vector3.Dot(Vector3.Normalize(r), EL);
-                rEL = (float)Math.Pow(rEL, 50);
+                if(Vector3.Dot(r, EL) < 0)
+                {
+                    float rEL = Vector3.Dot(Vector3.Normalize(r), EL);
+                    rEL = (float)Math.Pow(rEL, 50);
 
-                spec = light.color * rEL;
+                    spec = light.color * rEL;
+                }
             }
-
             return spec;
         }
 
